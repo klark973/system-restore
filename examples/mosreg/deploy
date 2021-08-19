@@ -1,0 +1,13 @@
+#!/bin/sh -efu
+
+# Trick to solve console problem
+#
+chvt 1
+mesg n
+exec </dev/console >/dev/console 2>&1
+echo; echo
+
+# Launch deploy system
+echo "ALT System Deploy started..."
+exec system-restore --deploy --poweroff --show-diag
+exit 1

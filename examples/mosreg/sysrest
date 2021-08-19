@@ -1,0 +1,13 @@
+#!/bin/sh -efu
+
+# Trick to solve console problem
+#
+chvt 1
+mesg n
+exec </dev/console >/dev/console 2>&1
+echo; echo
+
+# Launch system restore
+echo "ALT System Restore started..."
+exec system-restore --system --poweroff --show-diag
+exit 1

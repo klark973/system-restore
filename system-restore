@@ -1,0 +1,79 @@
+#!/bin/sh -efu
+### This file is covered by the GNU General Public License
+### version 3 or later.
+###
+### Copyright (C) 2021, ALT Linux Team
+
+#############################
+### Main execuatable file ###
+#############################
+
+# Executable name
+progname="${0##*/}"
+
+# Full path to this script
+scriptname="$(realpath -- "$0")"
+
+# Supplimental sources
+supplimental="${scriptname%/*}/lib"
+
+# Bootstrap
+. "$supplimental"/defaults.sh
+. "$supplimental"/privates.sh
+. "$supplimental"/common.sh
+. "$supplimental"/parser.sh
+. "$supplimental"/config.sh
+
+# Catch errors
+set -o errtrace
+trap 'unexpected_error "$LINENO" "${BASH_SOURCE[0]}"' ERR
+
+# Entry point
+setup_nls_support
+parse_cmdline "$@"
+check_prerequires
+
+# Checking backup and config
+if [ -n "$use_backup" ]; then
+	nls_config backup
+	check_metadata_and_archives
+	user_config restore.ini
+	[ -z "$use_hooks" ] ||
+		user_config config.sh
+	setup_profile
+	if [ -n "$profile" ]; then
+		user_config "$profile"/restore.ini
+		[ -z "$use_hooks" ] ||
+			user_config "$profile"/config.sh
+	fi
+	check_config
+fi
+
+# Setup the logger and UI
+. "$supplimental"/logger.sh
+setup_logger "$@"
+
+# Checking target disk drive
+if [ -n "$use_target" ]; then
+	nls_config target
+	. "$supplimental"/trusted.sh
+	. "$supplimental"/target.sh
+
+	check_trusted_boot_hw
+	protect_boot_devices
+	search_target_drive
+fi
+
+# Executing primary action
+if [ "$action" = validate ]; then
+	. "$supplimental"/validate.sh
+else
+	nls_config restore
+	. "$supplimental"/recovery.sh
+fi
+
+# Finalizing recovery
+[ -z "$finalact" ] ||
+	. "$supplimental"/finalize.sh
+exit 0
+
