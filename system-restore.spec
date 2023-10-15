@@ -1,7 +1,7 @@
 %define _unpackaged_files_terminate_build 1
 
 Name: system-restore
-Version: 0.1
+Version: 0.2
 Release: alt1
 
 Summary: ALT System Restore and Deployment
@@ -17,7 +17,7 @@ Packager: Leonid Krivoshein <klark@altlinux.org>
 AutoReq: noshell, noshebang
 
 %description
-Deploy and restore solution for automatic install system
+Deploy and restore solution for automatic system install
 from the prepared rootfs backup images without query user.
 
 %prep
@@ -26,6 +26,7 @@ from the prepared rootfs backup images without query user.
 %install
 mkdir -pm755 %buildroot{%_bindir,/usr/libexec,/var/log}
 install -pm755 %name %buildroot%_bindir/%name
+sed -i -e 's,^(readonly supplimental)=.*,\1="/usr/libexec/%name",' %buildroot%_bindir/%name
 cp -Rf libexec %buildroot/usr/libexec/%name
 :> %buildroot/var/log/%name.log
 cat >%buildroot/usr/libexec/%name/version.sh <<EOF
@@ -44,6 +45,6 @@ EOF
 %doc examples
 
 %changelog
-* Mon Aug 16 2021 Leonid Krivoshein <klark@altlinux.org> 0.1-alt1
+* Mon Oct 16 2023 Leonid Krivoshein <klark@altlinux.org> 0.2-alt1
 - Experimental build for Sisyphus: WiP!
 

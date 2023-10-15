@@ -2,11 +2,11 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
-#####################################
-### Command-line arguments parser ###
-#####################################
+#########################################
+### The command-line arguments parser ###
+#########################################
 
 show_usage()
 {
@@ -94,9 +94,11 @@ parse_cmdline()
 			set_action deploy
 			use_target=1
 			unique_clone=1
+			hostnaming=hw6
 			;;
 		-f|--full)
 			set_action fullrest
+			partitioner=fullrest
 			use_target=1
 			keep_uuids=1
 			;;
@@ -111,28 +113,57 @@ parse_cmdline()
 			;;
 
 		-b|--backup)
-			check_arg "--backup" "${2-}" "${L0000:-backup directory}"
-			msg="${L0000:-Directory not found: '%s'.}"
-			[ -d "$2" ] ||
-				show_usage "$msg" "$2"
-			backup="$(realpath -- "$2")"
+			check_arg --backup "${2-}" "${L0000:-backup directory or storage}"
+			case "${2-}" in
+			ftp://*)
+				backup=
+				backup_proto=ftp
+				remote_server="${2:6}"
+				;;
+			http://*)
+				backup=
+				backup_proto=http
+				remote_server="${2:7}"
+				;;
+			rsync://*)
+				backup=
+				backup_proto=rsync
+				remote_server="${2:8}"
+				;;
+			ssh://*)
+				backup=
+				backup_proto=ssh
+				remote_server="${2:6}"
+				;;
+			file://*)
+				msg="${L0000:-Directory not found: '%s'.}"
+				[ -d "${2:7}" ] ||
+					show_usage "$msg" "${2:7}"
+				backup="$(realpath -- "${2:7}")"
+				backup_proto=file
+				;;
+			*) # local filesystem too
+				msg="${L0000:-Directory not found: '%s'.}"
+				[ -d "$2" ] ||
+					show_usage "$msg" "$2"
+				backup="$(realpath -- "$2")"
+				backup_proto=file
+				;;
+			esac
 			shift
 			;;
 
 		-p|--profile)
-			check_arg "--profile" "${2-}" "${L0000:-profile name}"
+			check_arg --profile "${2-}" "${L0000:-profile name}"
 			msg="${L0000:-Invalid profile name: '%s'.}"
 			[ "$2" != virtual ] ||
-				show_usage "$msg" "$2"
-			msg="${L0000:-Profile not found: '%s'.}"
-			[ -d "$backup/$2" ] ||
 				show_usage "$msg" "$2"
 			profile="$2"
 			shift
 			;;
 
 		-x|--exclude)
-			check_arg "--exclude" "${2-}" "${L0000:-device or mount point}"
+			check_arg --exclude "${2-}" "${L0000:-device or mount point}"
 			msg="${L0000:-Value of '%s' must be device or mount point.}"
 			[ -b "$2" ] || mountpoint -q -- "$2" ||
 				show_usage "$msg" "--exclude"
@@ -141,7 +172,7 @@ parse_cmdline()
 			;;
 
 		-l|--logfile)
-			check_arg "--logfile" "${2-}" "${L0000:-log file path}"
+			check_arg --logfile "${2-}" "${L0000:-log file path}"
 			if [ "x$2" = "x-" ]; then
 				logfile=
 			else
@@ -206,18 +237,30 @@ parse_cmdline()
 	# Action required
 	[ -n "$action" ] ||
 		show_usage "${L0000:-Action must be specified!}"
+	msg="${L000:-%s: the target must be an existing block special device!}"
 
-	# Optional target
-	if [ "$#" -gt 1 ]; then
-		show_usage "${L0000:-Too many arguments.}"
-	elif [ "$#" = 1 ]; then
-		msg="${L000:-%s: target must be an existing block special device!}"
+	# Optional target(s)
+	if [ "$#" = 1 ]; then
 		[ -b "$1" ] ||
 			show_usage "$msg" "$1"
 		target="$1"
+	elif [ "$#" -gt 1 ]; then
+		multi_targets="$*"
+		n_targets=0
+
+		for target in $multi_targets; do
+			[ -b "$target" ] ||
+				show_usage "$msg" "$target"
+			n_targets=$((1 + $n_targets))
+		done
+
+		target=
 	fi
 
-	# Creating 'id' sub-directory as needed
+	# Creating 'id' sub-directory if it was requested
 	[ "$action" != make-id ] || . "$supplimental"/make-id.sh
+
+	# Require support for the protocol with remote server
+	. "$supplimental"/proto/"$backup_proto".sh
 }
 

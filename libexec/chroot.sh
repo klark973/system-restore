@@ -52,9 +52,7 @@ prepare_chroot()
 	export USER=root
 	EOF
 
-	for var in $chroot_vars _; do
-		[ "$var" != _ ] ||
-			continue
+	for var in $chroot_vars; do
 		eval "v=\"\${$var-}\""
 		[ -n "$v" ] ||
 			continue

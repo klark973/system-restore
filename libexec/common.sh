@@ -2,11 +2,11 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
-#####################################################
-### Common code which can used also in the chroot ###
-#####################################################
+##########################################################
+### Common functions which can used also in the chroot ###
+##########################################################
 
 # Try to include NLS configuration
 #
@@ -16,13 +16,13 @@ nls_config()
 		. "$supplimental/l10n/$lang/$1.sh"
 }
 
-# Enable native languages support
+# Enable native language support
 #
-setup_nls_support()
+nls_locale_setup()
 {
 	lang="${LANG:-en_US.utf8}"
-	lang="${LC_MESSAGES:-$lang}"
 	lang="${LC_ALL:-$lang}"
+	lang="${LC_MESSAGES:-$lang}"
 	lang="${lang%.*}"
 	[ -n "$lang" ] && [ -s "$supplimental/l10n/$lang"/help.msg ] ||
 		lang="en_US"
@@ -33,9 +33,7 @@ setup_nls_support()
 #
 is_number()
 {
-	[ -n "${1##*[!0-9]*}" ] && [ "$1" -ge 0 ] 2>/dev/null ||
-		return 1
-	return 0
+	[ -n "${1##*[!0-9]*}" ] && [ "$1" -ge 0 ] 2>/dev/null
 }
 
 # Serach element "$1" in the array "$@" and return 0 if it found
@@ -45,7 +43,7 @@ in_array()
 	local needle="$1"; shift
 
 	while [ "$#" -gt 0 ]; do
-		[ "x$needle" != "x$1" ] ||
+		[ "$needle" != "$1" ] ||
 			return 0
 		shift
 	done
@@ -53,21 +51,21 @@ in_array()
 	return 1
 }
 
-# Base implementation, overrided in logger.sh
+# Base implementation, it will be overrided in logger.sh
 #
 log()
 {
 	: # Nothing by default
 }
 
-# Base implementation, overrided in logger.sh
+# Base implementation, it will be overrided in logger.sh
 #
 run()
 {
 	"$@" || return $?
 }
 
-# Base implementation, overrided in dialogs.sh
+# Base implementation, it will be overrided in dialogs.sh
 #
 show_error()
 {
@@ -111,7 +109,7 @@ fatal()
 		rv="$UNKNOWN_ERROR"
 	eval "msg=\"\${$fcode:-$fmt}\""
 
-	if [ "x$rv" = "x$EXIT_SUCCESS" ]; then
+	if [ "$rv" = "$EXIT_SUCCESS" ]; then
 		log "SUCCESS[%s]: $fmt" "$fcode" "$@"
 		printf "$msg\n" "$@"
 		exit $EXIT_SUCCESS
@@ -127,8 +125,10 @@ fatal()
 #
 unexpected_error()
 {
+	local rv=$?
+
 	trap - ERR
-	fatal F000 "Unexpected error catched in %s[#%s]!" "$2" "$1"
+	fatal F000 "Unexpected error #%s catched in %s[#%s]!" "$rv" "$2" "$1"
 }
 
 # Output files list sorted by specified pattern(s)
@@ -149,28 +149,40 @@ human2size()
 	local lchar="${input:$slen:1}"
 
 	case "$lchar" in
-	[0-9]) rv="$input";;
-	K) rv="$(( $data * 1024 ))";;
-	M) rv="$(( $data * 1024 * 1024 ))";;
-	G) rv="$(( $data * 1024 * 1024 * 1024 ))";;
-	T) rv="$(( $data * 1024 * 1024 * 1024 * 1024 ))";;
+	[0-9])	rv="$input";;
+
+	K)	rv="$(( $data * 1024 ))";;
+	M)	rv="$(( $data * 1024 * 1024 ))";;
+	G)	rv="$(( $data * 1024 * 1024 * 1024 ))";;
+	T)	rv="$(( $data * 1024 * 1024 * 1024 * 1024 ))";;
+
+	b)	slen="$(($slen - 1))"
+		data="${input:0:$slen}"
+		lchar="${input:$slen:2}"
+
+		case "$lchar" in
+		Kb) rv="$(( $data * 1024 ))";;
+		Mb) rv="$(( $data * 1024 * 1024 ))";;
+		Gb) rv="$(( $data * 1024 * 1024 * 1024 ))";;
+		Tb) rv="$(( $data * 1024 * 1024 * 1024 * 1024 ))";;
+		esac
+		;;
+
+	B)	slen="$(($slen - 1))"
+		data="${input:0:$slen}"
+		lchar="${input:$slen:2}"
+
+		case "$lchar" in
+		KB) rv="$(( $data * 1000 ))";;
+		MB) rv="$(( $data * 1000 * 1000 ))";;
+		GB) rv="$(( $data * 1000 * 1000 * 1000 ))";;
+		TB) rv="$(( $data * 1000 * 1000 * 1000 * 1000 ))";;
+		esac
+		;;
 	esac
 
-	[ -n "$rv" ] && [ "$rv" -gt 0 ] 2>/dev/null ||
+	is_number "$rv" ||
 		fatal F000 "Can't convert to the number!"
 	echo -n "$rv"
-}
-
-# Try to include config file or script with the user-defined hooks
-#
-user_config()
-{
-	local src="$1"
-
-	[ -s "$backup/$src" ] ||
-		return 0
-	( . "$backup/$src" ) >/dev/null 2>&1 ||
-		fatal F000 "Invalid source or config: %s" "$1"
-	. "$backup/$src"
 }
 

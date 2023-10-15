@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 # Called before including restore.ini files
 # supplied with the backup and/or sub-profile,
@@ -17,7 +17,7 @@ check_prereq_platform()
 	# EFI System partition default size
 	esp_size=256M
 
-	# x86_64 supports NVRAM in UEFI-boot mode
+	# x86_64 supports NVRAM only in UEFI-boot mode
 	have_nvram="$uefiboot"
 }
 
@@ -30,13 +30,12 @@ setup_privates_platform()
 	# Resetting BIOS Boot partition
 	if [ "$pt_schema" = dos ]; then
 		bbp_size=
-	elif [ "$pt_schema" = gpt ]; then
-		[ -z "$uefiboot" ] || [ -n "$biosboot_too" ] ||
-			bbp_size=
+	elif [ "$pt_schema" = gpt ] && [ -z "$biosboot_too" ]; then
+		bbp_size=
 	fi
 
 	# Determinating convert mode
-	if [ -s "$backup"/esp.tgz ] ||
+	if is_file_exists "esp.$ziptype"   ||
 		[ -s "$workdir"/esp.uuid ] ||
 		grep -sE '^UUID=' "$workdir"/FSTABLE |
 			grep -qsE '\s+\/boot\/efi\s+'
@@ -53,20 +52,26 @@ setup_privates_platform()
 	fi
 }
 
-# Called from the chroot, it install one
+# Called from the chroot, it installs one
 # or more platform-specific bootloader(s)
 #
 setup_bootloaders_platform()
 {
+	local v
+
 	if [ -z "$uefiboot" ] || [ -n "$biosboot_too" ]; then
 		log "Installing %s for BIOS/CSM boot mode..." "grub-pc"
-		run grub-install --target=i386-pc $grub_install_opts \
-			--boot-directory=/boot --recheck -- "$target"
 		need_grub_update=1
+
+		for v in ${multi_targets:-$target}; do
+			run grub-install \
+				--target=i386-pc $grub_install_opts \
+				--boot-directory=/boot --recheck -- "$v"
+		done
 	fi
 
 	if [ -n "$uefiboot" ]; then
-		local f="BOOT/BOOTX64.EFI"
+		local v f="BOOT/BOOTX64.EFI"
 
 		[ -n "$safe_uefi_boot" ] && [ -s "/boot/efi/EFI/$f" ] ||
 			f="$efi_distributor/grubx64.efi"
@@ -77,10 +82,14 @@ setup_bootloaders_platform()
 			log "Bootloader %s for %s already installed" "grub-efi" "$platform"
 		else
 			log "Installing bootloader %s for %s..." "grub-efi" "$platform"
-			run grub-install --target=x86_64-efi $grub_install_opts \
-				--efi-directory=/boot/efi --recheck \
-				--boot-directory=/boot -- "$target"
 			need_grub_update=1
+
+			for v in ${multi_targets:-$target}; do
+				run grub-install \
+					--target=x86_64-efi $grub_install_opts \
+					--efi-directory=/boot/efi --recheck \
+					--boot-directory=/boot -- "$v"
+			done
 		fi
 	fi
 }

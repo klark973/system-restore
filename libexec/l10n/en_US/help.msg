@@ -1,4 +1,4 @@
-Usage: @PROG@ <action> [<options>...] [--] [<target>]
+Usage: @PROG@ <action> [<options>...] [--] [<target>...]
 
 Actions:
   -c, --check-only  Only check images and backup metadata.
@@ -20,8 +20,9 @@ Options:
   -b, --backup=     Specify alternate path to the backup.
   -p, --profile=    Specify name of the sub-profile to use.
   -x, --exclude=    Add specified block special device or mount point
-                    to the write-protected devices list, excluded when
-                    search target disk drive. Can repeat several times.
+                    to the write-protected devices list, it excluded
+                    when search target disk drive. This option can be
+                    repeated several times.
       --no-log      Turn OFF logging to file.
       --no-hooks    Disable to use user-defined scripts supplied with
                     the backup and/or sub-profiles. This may be useful
@@ -37,17 +38,17 @@ Options:
 Examples:
   @PROG@ --validate
 
-  Backup metadata and image cheksums will be validated. Backup located
-  in the current working directory.
+  The backup metadata and image cheksums will be validated. The backup
+  located in the current working directory.
 
   @PROG@ -d -P -b /mnt/backup -p grav-2021 -- /dev/nvme0n1
 
-  Backup in /mnt/backup directory will be checked first, also will be
-  checked and set to directly use sub-profile "grav-2021", if exists,
-  device /dev/nvme0n1 will be cleaned, re-partitioned, restored from
-  the backup in "deploy mode", host private data will be regenerated
-  for installation personification, and after success recovery the
-  computer power will be turned OFF.
+  The backup in /mnt/backup directory will be checked first, also will
+  be checked and set to directly use sub-profile "grav-2021", device
+  /dev/nvme0n1 will be cleaned, repartitioned, restored from the backup
+  in "deploy mode", host private data will be regenerated for installation
+  personification, and after success recovery the computer power will be
+  turned OFF.
 
 User manual:
   https://www.altlinux.org/Rescue/Recovery (ru)

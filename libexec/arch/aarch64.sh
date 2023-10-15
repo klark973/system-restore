@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023 ALT Linux Team
 
 # Called before including restore.ini files
 # supplied with the backup and/or sub-profile,
@@ -25,7 +25,7 @@ check_prereq_platform()
 setup_privates_platform()
 {
 	[ -n "$uefiboot" ] && [ -n "$esp_size" ] ||
-		fatal F000 "UEFI boot and ESP required for %s!" "$platform"
+		fatal F000 "UEFI boot and ESP are required for %s!" "$platform"
 	biosboot_too=
 	uefi2bios=
 	bios2uefi=
@@ -33,12 +33,12 @@ setup_privates_platform()
 	bbp_size=
 }
 
-# Called from the chroot, it install one
+# Called from the chroot, it installs one
 # or more platform-specific bootloader(s)
 #
 setup_bootloaders_platform()
 {
-	local f="BOOT/BOOTAA64.EFI"
+	local v f="BOOT/BOOTAA64.EFI"
 
 	[ -n "$safe_uefi_boot" ] && [ -s "/boot/efi/EFI/$f" ] ||
 		f="$efi_distributor/bootaa64.efi"
@@ -49,10 +49,14 @@ setup_bootloaders_platform()
 		log "Bootloader %s for %s already installed" "grub-efi" "$platform"
 	else
 		log "Installing bootloader %s for %s..." "grub-efi" "$platform"
-		run grub-install --target=arm64-efi $grub_install_opts \
-			--efi-directory=/boot/efi --recheck \
-			--boot-directory=/boot -- "$target"
 		need_grub_update=1
+
+		for v in ${multi_targets:-$target}; do
+			run grub-install \
+				--target=arm64-efi $grub_install_opts \
+				--efi-directory=/boot/efi --recheck \
+				--boot-directory=/boot -- "$v"
+		done
 	fi
 }
 

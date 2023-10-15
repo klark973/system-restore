@@ -62,7 +62,7 @@ __specialize_platform()
 	fi
 
 	for flavour in $kernel_flavours; do
-		for kver in $(ls -X1 /lib/modules/) _; do
+		for kver in $(ls -X1 /lib/modules/); do
 			[ -z "${kver##*-$flavour-*}" ] ||
 				continue
 			[ "x$kver" != "x$old_kernel" ] ||
@@ -84,14 +84,14 @@ __specialize_platform()
 }
 
 # Special hook for platform-specific function,
-# can be overrided in arch/$platform.sh
+# it can be overrided in arch/$platform.sh
 #
 setup_bootloaders_platform()
 {
-	log "setup_bootloaders_platform() hook called"
+	log "setup_bootloaders_platform() not used"
 }
 
-# Can be overrided in $backup/chroot.sh
+# It can be overrided in $backup/chroot.sh
 # and/or in $backup/$profile/chroot.sh
 #
 specialize()

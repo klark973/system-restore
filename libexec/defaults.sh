@@ -2,25 +2,58 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 #####################################################
 ### Common options for deploy and restore actions ###
 #####################################################
 
-# Source images and deploy system version in numeric
-# format MAJOR[.MINOR] or empty value (by default)
-# if versioning not used
+# Source images and deploy system version in the numeric
+# format MAJOR[.MINOR] or empty value (by default), if
+# versioning is not used
 release=
 
 # Default path to RELEASE file in the target system
 release_file=/etc/rootfs-release
 
-# non-empty when deploy or restore on the bare-metal,
+# Non-empty when deploy or restore on the bare metal,
 # by default set as profile name, but can be changed
 # in the restore.ini supplied with the profile, not
-# used with 'virtual' profile
+# used with the 'virtual' profile
 baremetal=
+
+# Computer name inside source rootfs backup (will be
+# extracted from backup metadata: ORGHOST, by default)
+template=
+
+# The target computer base name (required)
+computer=host
+
+# How to create unique hostname? Available algorithms are:
+# copy: do not change source template, just copy it "as is".
+# ip1: add last (4'th) part of the IP-address to the base name.
+# ip2: add two last (3'rd and 4'th) parts of the IP-address.
+# ip3: add three last (2'nd...4'th) parts of the IP-address.
+# hw6: add six hexadecimal digits from Ethernet MAC-address.
+# rnd: generate random part and add it to the base name.
+# hook: use user-defined hostnaming function.
+# Default value is "hw6" for deploy or "copy" for restore.
+hostnaming=copy
+
+# How to disk(s) partitioning? Available options are:
+# plain: one-drive DOS/MBR or GUID/GPT default layout.
+# timeshift: one-drive Timeshift-compatible layout.
+# lvm: one-drive LVM default layout.
+# raid: multi-drives default layout.
+# hook: use user-defined partitioner.
+# Default value is "plain".
+partitioner=plain
+
+# Source disk drives for build only one target device
+multi_targets=
+
+# The number of the source disk drives for build target
+n_targets=
 
 # Target whole disk drive DEVICE name (optional)
 target=
@@ -34,6 +67,10 @@ target_model_pattern=
 # sizes summa of the all used partitions
 target_min_capacity=
 
+# Maximum of the target device size for auto-detection,
+# empty value (by default) when upper limit not used
+target_max_capacity=
+
 # 1: turn ON backup checksums validation before deploy
 # or restore action (by default, it is safer but longer)
 validate=1
@@ -41,34 +78,35 @@ validate=1
 # 1: enable deploy or restore to removable devices
 removable=
 
-# empty: generate new partition UUID's (by default for deploy)
+# Empty: generate new partition UUID's (by default for deploy)
 # 1: keep original partition UUID's (by default for restore)
+# it can be changed anyway
 keep_uuids=
 
-# 1: enable write to NVRAM on the target host (only whith UEFI
-# boot or if PReP exists, by default auto-detected in run-time),
-# empty: disable write to NVRAM on the target host
-have_nvram=
-
-# 1: clear NVRAM before store new record (only if uefiboot=1
-# or if PReP exists on IBM Power)
+# 1: clear NVRAM before store new record (only if uefiboot=1)
 clear_nvram=
 
-# non-empty: setup also /EFI/BOOT/BOOTX64.EFI by specified names
-# of the directory in /EFI and EFI-boot image (only if uefiboot=1),
-# for example: "altlinux/shimx64.efi"
+# 1: disable write to NVRAM before finish restore (this is useful
+# when UEFI bootloader alredy made the record or if NVRAM is not
+# supported by efibootmgr on this hardware), empty: enable write
+# to NVRAM in UEFI-boot mode when it needed (by default)
+no_nvram=
+
+# Non-empty: setup also standard EFI-boot image to the /EFI
+# directory by specified file name (only if uefiboot=1), for
+# example: "altlinux/shimx64.efi" => "/EFI/BOOT/BOOTX64.EFI"
 safe_uefi_boot=
 
 # Auto-detected in run-time EFI Distributor ID if value not set
 efi_distributor=
 
-# empty (by default): auto-detect in run-time wich target system
+# Empty (by default): auto-detect in run-time which target system
 # has rpm executable and valid RPM database, non-empty: turn OFF
 # this auto-detcion, 1: target system has RPM, 2: target system
 # has no rpm executable and valid RPM database
 have_rpmdb=
 
-# empty: TBH device not required (by default)
+# Empty: TBH device not required (by default)
 # 1: TBH device is recommended, warning if not found
 # 2: TBH device is required, fatal message if not found
 check_tbh=
@@ -81,10 +119,15 @@ old_ext4_boot=
 # Additional options for grub-install (optional)
 grub_install_opts=
 
+# Users list to remove with the /home directory contents,
+# it used only in deploy and full-restore modes, used only
+# in deploy and full-restore modes
+remove_users_list=
+
 # Users list to re-create /home directory contents, existing
 # home archive will be ignored with this option, used only
 # in deploy and full-restore modes
-create_users=
+create_users_list=
 
 # Pattern to remove old Linux kernel in the chroot,
 # for example: '5.4.68-std-def-*', not used if empty
@@ -101,7 +144,7 @@ chroot_LC_ALL="C.utf8"
 chroot_TERM=linux
 
 ############################
-### restore only options ###
+### Restore only options ###
 ############################
 
 # 1: enable to expand last partition before formatting,
@@ -113,14 +156,8 @@ expand_last_part=
 unique_clone=
 
 ###########################
-### deploy only options ###
+### Deploy only options ###
 ###########################
-
-# Computer name inside source rootfs backup
-template=computername
-
-# Target computer base name
-computer=host
 
 # 1: cleanup rootfs from the trash files after restore
 cleanup_after=
@@ -128,10 +165,10 @@ cleanup_after=
 # 1: turn ON optimizations for SSD/NVME, such as "discard"
 use_ssd=
 
-# Single wired interface name on the target system (optional)
+# Single wired interface name in the target system (optional)
 wired_iface=
 
-# 1: add BIOS/CSM boot mode support (only on x86_64 if uefiboot=1)
+# 1: add BIOS/CSM-boot mode support (only on x86_64 if uefiboot=1)
 biosboot_too=
 
 # 1: force using GUID/GPT partitioning schema

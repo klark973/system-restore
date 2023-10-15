@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 # Called before including restore.ini files
 # supplied with the backup and/or sub-profile,
@@ -21,21 +21,31 @@ check_prereq_platform()
 #
 setup_privates_platform()
 {
-	[ -z "$uefiboot" ] ||
+	[ -z "$uefiboot" ] || [ -z "$esp_size" ] ||
 		fatal F000 "UEFI boot is not supported on %s!" "$platform"
 	[ "$pt_schema" = dos ] || [ -n "$bbp_size" ] ||
-		fatal F000 "BIOS Boot partition size not defined!"
+		fatal F000 "BIOS Boot partition size is not defined!"
 	[ "$pt_schema" = gpt ] || bbp_size=
+	biosboot_too=
+	uefi2bios=
+	bios2uefi=
+	prepsize=
 }
 
-# Called from the chroot, it install one
+# Called from the chroot, it installs one
 # or more platform-specific bootloader(s)
 #
 setup_bootloaders_platform()
 {
+	local v
+
 	log "Installing %s for BIOS/CSM boot mode..." "grub-pc"
-	run grub-install --target=i386-pc $grub_install_opts \
-		--boot-directory=/boot --recheck -- "$target"
 	need_grub_update=1
+
+	for v in ${multi_targets:-$target}; do
+		run grub-install \
+			--target=i386-pc $grub_install_opts \
+			--boot-directory=/boot --recheck -- "$v"
+	done
 }
 

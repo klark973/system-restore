@@ -37,7 +37,7 @@ protect_boot_devices()
 {
 	local number sysfs mp pdev wdev
 
-	for mp in $protected_mpoints _; do
+	for mp in $protected_mpoints; do
 		[ -d "$mp" ] && mountpoint -q -- "$mp" ||
 			continue
 		number="$(mountpoint -d -- "$mp")"
@@ -118,9 +118,9 @@ search_target_drive()
 	fi
 
 	# Searching target disk drive
-	for dev in $(ls /sys/block/) _; do
+	for dev in $(ls /sys/block/); do
 		case "$dev" in
-		loop[0-9]*|ram[0-9]*|sr[0-9]*|dm-[0-9]*|md-[0-9]*|_)
+		loop[0-9]*|ram[0-9]*|sr[0-9]*|dm-[0-9]*|md[0-9]*|_)
 			continue
 			;;
 		esac

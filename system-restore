@@ -1,61 +1,70 @@
-#!/bin/sh -efu
+#!/bin/bash
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 #############################
 ### Main execuatable file ###
 #############################
 
+# Safety first
+set -o errexit
+set -o noglob
+set -o nounset
+set -o errtrace
+
 # Executable name
-progname="${0##*/}"
+readonly progname="${0##*/}"
 
 # Full path to this script
-scriptname="$(realpath -- "$0")"
+readonly scriptname="$(realpath -- "$0")"
 
 # Supplimental sources
-supplimental="${scriptname%/*}/lib"
+readonly supplimental="${scriptname%/*}/libexec"
 
 # Bootstrap
 . "$supplimental"/defaults.sh
+[ ! -s "/etc/$progname"/restore.ini ] ||
+	. "/etc/$progname"/restore.ini
 . "$supplimental"/privates.sh
 . "$supplimental"/common.sh
 . "$supplimental"/parser.sh
 . "$supplimental"/config.sh
 
-# Catch errors
-set -o errtrace
+# Catch any errors
 trap 'unexpected_error "$LINENO" "${BASH_SOURCE[0]}"' ERR
 
 # Entry point
-setup_nls_support
+nls_locale_setup
 parse_cmdline "$@"
 check_prerequires
 
-# Checking backup and config
-if [ -n "$use_backup" ]; then
+# Check backup and configuration
+if [ -n "${use_backup-}" ]; then
 	nls_config backup
-	check_metadata_and_archives
+	check_backup_metadata
 	user_config restore.ini
-	[ -z "$use_hooks" ] ||
+	[ -z "${use_hooks-}" ] ||
 		user_config config.sh
 	setup_profile
-	if [ -n "$profile" ]; then
-		user_config "$profile"/restore.ini
-		[ -z "$use_hooks" ] ||
-			user_config "$profile"/config.sh
+
+	if [ -n "${profile-}" ]; then
+		user_config "${profile-}"/restore.ini
+		[ -z "${use_hooks-}" ] ||
+			user_config "${profile-}"/config.sh
 	fi
+
 	check_config
 fi
 
-# Setup the logger and UI
+# Setup logger and UI
 . "$supplimental"/logger.sh
-setup_logger "$@"
 
-# Checking target disk drive
-if [ -n "$use_target" ]; then
+# Check the target disk drive
+if [ -n "${use_target-}" ]; then
 	nls_config target
+
 	. "$supplimental"/trusted.sh
 	. "$supplimental"/target.sh
 
@@ -64,16 +73,17 @@ if [ -n "$use_target" ]; then
 	search_target_drive
 fi
 
-# Executing primary action
-if [ "$action" = validate ]; then
+# Execute the primary action
+if [ "${action-}" = validate ]; then
 	. "$supplimental"/validate.sh
 else
 	nls_config restore
+
 	. "$supplimental"/recovery.sh
 fi
 
-# Finalizing recovery
-[ -z "$finalact" ] ||
+# Finalize recovery
+[ -z "${finalact-}" ] ||
 	. "$supplimental"/finalize.sh
 exit 0
 
