@@ -4,13 +4,13 @@ Actions:
   -c, --check-only  Only check images and backup metadata.
   -C, --check-conf  Also check user-defined scripts and config,
                     supplied with the backup.
-  -t, --scan-only   Only scan all drives and search the target.
   -v, --validate    Check backup and validate all images checksums.
+  -t, --scan-only   Scan disk drives and lock for potential targets.
+  -m, --make-id     Create sub-directory 'id' with the host DMI-info.
   -d, --deploy      Deploy mode: full restore and make unique clone.
   -f, --full        Restore all partitions with disk repartitioning.
   -s, --system      Restore only system partitions, don't touch user
                     data partition and disable disk repartitioning.
-  -m, --make-id     Create sub-directory 'id' with the host DMI-info.
   -V, --version     Show this program version.
   -h, --help        Show this help message.
 
@@ -19,6 +19,7 @@ Options:
   -P, --poweroff    Turn power OFF after success restore.
   -b, --backup=     Specify alternate path to the backup.
   -p, --profile=    Specify name of the sub-profile to use.
+  -r, --removable   Enable to use removable devices as targets.
   -x, --exclude=    Add specified block special device or mount point
                     to the write-protected devices list, it excluded
                     when search target disk drive. This option can be

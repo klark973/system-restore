@@ -107,7 +107,8 @@ fatal()
 	nls_config fatal
 	is_number "$rv" ||
 		rv="$UNKNOWN_ERROR"
-	eval "msg=\"\${$fcode:-$fmt}\""
+	eval "msg=\"\${$fcode-}\""
+	msg="${msg:-$fmt}"
 
 	if [ "$rv" = "$EXIT_SUCCESS" ]; then
 		log "SUCCESS[%s]: $fmt" "$fcode" "$@"
@@ -125,7 +126,7 @@ fatal()
 #
 unexpected_error()
 {
-	local rv=$?
+	local rv="$?"
 
 	trap - ERR
 	fatal F000 "Unexpected error #%s catched in %s[#%s]!" "$rv" "$2" "$1"

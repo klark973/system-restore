@@ -32,7 +32,7 @@ set_action()
 
 check_arg()
 {
-	local msg="${L0000:-After option '%s' must specify %s!.}"
+	local msg="${L0000:-After the option '%s' you should specify %s!.}"
 
 	[ -n "$2" ] && [ "x$2" != "x--" ] ||
 		show_usage "$msg" "$1" "$3"
@@ -41,8 +41,8 @@ check_arg()
 
 show_version()
 {
-	local SYSREST_VERSION=
-	local SYSREST_BUILD_DATE=
+	local SYSREST_VERSION=0
+	local SYSREST_BUILD_DATE=0
 
 	. "$supplimental"/version.sh
 
@@ -65,11 +65,11 @@ parse_cmdline()
 	local msg=
 	local l_opts="check-only,scan-only,validate,deploy,full,system"
 	      l_opts="$l_opts,check-config,check-conf,check-meta,make-id"
-	      l_opts="$l_opts,check-target,reboot,poweroff,backup:,profile:"
+	      l_opts="$l_opts,reboot,poweroff,backup:,profile:,removable"
 	      l_opts="$l_opts,exclude:,logfile:,show-diag,no-dialog,dry-run"
 	      l_opts="$l_opts,no-hooks,no-log,show-diags,no-dialogs,dryrun"
 	      l_opts="$l_opts,append,syslog,debug,version,help"
-	local s_opts="+cCtvdfsmb:p:x:l:PRnauDVh"
+	local s_opts="+cCtvdfsmb:p:rx:l:PRnauDVh"
 
 	l_opts=$(getopt -n "$progname" -o "$s_opts" -l "$l_opts" -- "$@") ||
 		show_usage
@@ -82,13 +82,17 @@ parse_cmdline()
 		-C|--check-conf|--check-config)
 			set_action chkconf
 			;;
-		-t|--scan-only|--check-target)
+		-v|--validate)
+			set_action validate
+			;;
+		-t|--scan-only)
 			set_action chkdisk
 			use_target=1
 			use_backup=
 			;;
-		-v|--validate)
-			set_action validate
+		-m|--make-id)
+			set_action make-id
+			use_backup=
 			;;
 		-d|--deploy)
 			set_action deploy
@@ -106,10 +110,6 @@ parse_cmdline()
 			set_action sysrest
 			use_target=1
 			keep_uuids=1
-			;;
-		-m|--make-id)
-			set_action make-id
-			use_backup=
 			;;
 
 		-b|--backup)
@@ -155,16 +155,13 @@ parse_cmdline()
 
 		-p|--profile)
 			check_arg --profile "${2-}" "${L0000:-profile name}"
-			msg="${L0000:-Invalid profile name: '%s'.}"
-			[ "$2" != virtual ] ||
-				show_usage "$msg" "$2"
 			profile="$2"
 			shift
 			;;
 
 		-x|--exclude)
 			check_arg --exclude "${2-}" "${L0000:-device or mount point}"
-			msg="${L0000:-Value of '%s' must be device or mount point.}"
+			msg="${L0000:-Value for '%s' should be device or mount point.}"
 			[ -b "$2" ] || mountpoint -q -- "$2" ||
 				show_usage "$msg" "--exclude"
 			protected_mpoints="$protected_mpoints $2"
@@ -190,6 +187,9 @@ parse_cmdline()
 			;;
 		-R|--reboot)
 			finalact=reboot
+			;;
+		-r|--removable)
+			removable=1
 			;;
 		--no-log)
 			logfile=
@@ -237,13 +237,14 @@ parse_cmdline()
 	# Action required
 	[ -n "$action" ] ||
 		show_usage "${L0000:-Action must be specified!}"
-	msg="${L000:-%s: the target must be an existing block special device!}"
+	msg="${L000:-%s: the target should be an existing block special device!}"
 
 	# Optional target(s)
 	if [ "$#" = 1 ]; then
 		[ -b "$1" ] ||
 			show_usage "$msg" "$1"
 		target="$1"
+		n_targets=1
 	elif [ "$#" -gt 1 ]; then
 		multi_targets="$*"
 		n_targets=0
@@ -260,7 +261,7 @@ parse_cmdline()
 	# Creating 'id' sub-directory if it was requested
 	[ "$action" != make-id ] || . "$supplimental"/make-id.sh
 
-	# Require support for the protocol with remote server
+	# Require support of the protocol with remote server
 	. "$supplimental"/proto/"$backup_proto".sh
 }
 

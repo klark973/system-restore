@@ -21,7 +21,7 @@ check_prereq_platform()
 #
 setup_privates_platform()
 {
-	[ -z "$uefiboot" ] ||
+	[ -z "$uefiboot" ] && [ -z "$esp_size" ] ||
 		fatal F000 "UEFI boot is not supported on %s!" "$platform"
 	[ -n "$bootsize" ] ||
 		fatal F000 "/boot size is not defined!"
@@ -30,7 +30,6 @@ setup_privates_platform()
 	uefi2bios=
 	bios2uefi=
 	prepsize=
-	esp_size=
 	bbp_size=
 }
 

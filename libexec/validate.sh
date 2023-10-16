@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 ######################################
 ### Validator of the backup images ###
@@ -61,7 +61,7 @@ validate_backup_images()
 	[ -z "$profile" ] || [ ! -s "$backup/$profile/update.$ziptype" ] ||
 		validate_in_the_dir "$backup/$profile"
 	validate_in_the_dir "$backup" "$workdir"
-	msg="Backup images validated successfully."
+	msg="Backup images validated successfully!"
 	[ "$action" != validate ] ||
 		fatal F000 "$msg"
 	log "$msg"

@@ -4,6 +4,7 @@
 ###
 ### Copyright (C) 2021, ALT Linux Team
 
+F000=""
 F001=""
 F002=""
 F003=""

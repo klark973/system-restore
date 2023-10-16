@@ -32,7 +32,7 @@ readonly supplimental="${scriptname%/*}/libexec"
 . "$supplimental"/parser.sh
 . "$supplimental"/config.sh
 
-# Catch any errors
+# Catch all unexpected errors
 trap 'unexpected_error "$LINENO" "${BASH_SOURCE[0]}"' ERR
 
 # Entry point

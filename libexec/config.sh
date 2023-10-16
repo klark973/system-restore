@@ -20,6 +20,8 @@ setup_privates_platform()
 	: # Nothing by default
 }
 
+# It called before parsing the configuration
+#
 check_prerequires()
 {
 	local v="s/\s*Hypervisor vendor:\s+//p"
@@ -56,7 +58,7 @@ check_volume_layouts()
 {
 	local v cnt=0
 
-	while IFS=' ' read -r v; do
+	for v in $(cat TARGETS); do
 		[ -s "$v.sfdisk" ] ||
 			fatal F000 "%s.sfdisk required!" "$v"
 		if grep -qsE '^label: gpt$' "$v.sfdisk"; then
@@ -67,7 +69,7 @@ check_volume_layouts()
 			pt_schema=dos
 		fi
 		cnt=$((1 + $cnt))
-	done <TARGETS
+	done
 	#
 	[ -n "$pt_schema" ] ||
 		fatal F000 "Metadata for target device(s) not found!"
@@ -80,6 +82,8 @@ check_volume_layouts()
 	fi
 }
 
+# Check archives and metadata of the backup
+#
 check_backup_metadata()
 {
 	local v
@@ -99,9 +103,14 @@ check_backup_metadata()
 	done
 	[ -n "$ziptype" ] ||
 		fatal F000 "META and root archives are required!"
+	case "$ziptype" in
+	tgz)	v=z;;
+	txz)	v=J;;
+	tbz2)	v=j;;
+	esac
 	cd -- "$workdir"/
-	read_file "META.$ziptype" |tar -xpf - 2>/dev/null ||
-		fatal F000 "Can't unpack META.$ziptype!"
+	read_file "META.$ziptype" |tar -xp${v}f - ||
+		fatal F000 "Can't unpack 'META.%s'!" "$ziptype"
 	v="$(head -n1 VERSION 2>/dev/null ||:)"
 	case "$v" in
 	0.[1-9]*)
@@ -115,7 +124,6 @@ check_backup_metadata()
 	[ -s FSTABLE ] &&
 	[ -s LOADERS ] &&
 	[ -s RELEASE ] &&
-	[ -s RNDSEED ] &&
 	[ -s TARGETS ] &&
 	[ -s VOLUMES ] &&
 	[ -s ZIPTYPE ] &&
@@ -172,7 +180,7 @@ check_backup_metadata()
 		rootsize=
 	[ "$action" != chkmeta ] ||
 		fatal F000 "Metadata checked successfully!"
-	cd - 2>/dev/null
+	cd - >/dev/null
 }
 
 # Try to include config file or script with the user-defined hooks
@@ -197,6 +205,8 @@ user_config()
 	[ "$backup_proto" = file ] || rm -f -- "$cfg"
 }
 
+# Load profiles list from the remote server
+#
 get_profiles_list()
 {
 	local pdir dname
@@ -212,6 +222,8 @@ get_profiles_list()
 	fi
 }
 
+# Compare DMI information with specified profile
+#
 is_it_that_profile()
 {
 	local dir1=/sys/class/dmi/id
@@ -294,11 +306,11 @@ __check_config()
 	fi
 
 	# Changing defaults
-	is_file_exits "boot.$ziptype" ||
+	is_file_exists "boot.$ziptype" ||
 		bootsize=
-	[ -n "$create_users_list" ]   ||
-	is_file_exits "var.$ziptype"  ||
-	is_file_exits "home.$ziptype" ||
+	[ -n "$create_users_list" ]    ||
+	is_file_exists "var.$ziptype"  ||
+	is_file_exists "home.$ziptype" ||
 		rootsize=
 	[ -s checksum.256 ] || [ -s checksum.SHA ] || [ -s checksum.MD5 ] ||
 	[ -n "$profile" ] && is_file_exists "$profile/update.$ziptype" ||
@@ -349,12 +361,13 @@ __check_config()
 	done
 
 	[ "$action" != chkconf ] ||
-		fatal F000 "Configuration checked successfully."
+		fatal F000 "Configuration checked successfully!"
 	uefi2bios=
 	bios2uefi=
 }
 
-# It can be overrided in $backup/config.sh
+# Check the final configuartion, inclusive user
+# data, it can be overrided in $backup/config.sh
 # or $backup/$profile/config.sh
 #
 check_config()

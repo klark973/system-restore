@@ -1,4 +1,9 @@
 #!/bin/sh -efu
+###
+### This file is covered by the GNU General Public License
+### version 3 or later.
+###
+### Copyright (C) 2021-2023, ALT Linux Team
 
 # Variables which could be empty
 for var_name in $chroot_vars; do
@@ -196,7 +201,7 @@ then
 	run update-grub
 fi
 
-log "Execution in the chroot finished successfully."
+log "Execution in the chroot finished successfully!"
 
 # Finishing
 { run sync
