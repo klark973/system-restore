@@ -51,6 +51,14 @@ in_array()
 	return 1
 }
 
+# Display formatted message on the console
+#
+msg()
+{
+	local fmt="$1"; shift
+	printf "$fmt\n" "$@"
+}
+
 # Base implementation, it will be overrided in logger.sh
 #
 log()
@@ -69,10 +77,11 @@ run()
 #
 show_error()
 {
-	local fcode="$1" fmt="$2"; shift 2
-	local msg="${F000:-%s fatal[%s]}"
+	local fcode="${1:1}" fmt="$2"
+	local msg="${F000-%s fatal[%s]}"
 
-	printf "$msg: $fmt\n" "$progname" "$fcode" "$@" >&2
+	shift 2
+	msg "$msg: $fmt\n" "$progname" "$fcode" "$@" >&2
 }
 
 # Default implementation of the exit handler
@@ -84,7 +93,7 @@ __exit_handler()
 	trap - EXIT; cd /
 	[ -z "$workdir" ] || [ ! -d "$workdir" ] ||
 		run rm -rf --one-file-system -- "$workdir"
-	log "${L0000:-Terminated with exit code %s.}" "$rv"
+	log "${L0000-Terminated with exit code %s.}" "$rv"
 	return $rv
 }
 
@@ -111,12 +120,12 @@ fatal()
 	msg="${msg:-$fmt}"
 
 	if [ "$rv" = "$EXIT_SUCCESS" ]; then
-		log "SUCCESS[%s]: $fmt" "$fcode" "$@"
-		printf "$msg\n" "$@"
+		log "SUCCESS: $fmt" "$@"
+		msg "$msg" "$@"
 		exit $EXIT_SUCCESS
 	fi
 
-	log "FATAL[%s]: $fmt" "$fcode" "$@"
+	log "FATAL[%s]: $fmt" "${fcode:1}" "$@"
 	show_error "$fcode" "$msg" "$@"
 	trap - ERR
 	exit $rv
@@ -185,5 +194,62 @@ human2size()
 	is_number "$rv" ||
 		fatal F000 "Can't convert to the number!"
 	echo -n "$rv"
+}
+
+# Returns string representation of the chassis type
+#
+get_chassis_type()
+{
+	local s=(
+		"Computer"
+		"Other"
+		"Unknown"
+		"Desktop"
+		"Low Profile Desktop"
+		"Pizza Box"
+		"Mini Tower"
+		"Tower"
+		"Portable"
+		"Laptop"
+		"Notebook"
+		"Hand Held"
+		"Docking Station"
+		"All In One"
+		"Sub Notebook"
+		"Space-saving"
+		"Lunch Box"
+		"Main Server Chassis"
+		"Expansion Chassis"
+		"Sub Chassis"
+		"Bus Expansion Chassis"
+		"Peripheral Chassis"
+		"RAID Chassis"
+		"Rack Mount Chassis"
+		"Sealed-case PC"
+		"Multi-system"
+		"CompactPCI"
+		"AdvancedTCA"
+		"Blade"
+		"Blade Enclosing"
+		"Tablet"
+		"Convertible"
+		"Detachable"
+		"IoT Gateway"
+		"Embedded PC"
+		"Mini PC"
+		"Stick PC"
+	)
+	local t=0 d=/sys/class/dmi/id
+
+	[ -d "$d" ] ||
+		d=/sys/devices/virtual/dmi/id
+	[ ! -r "$d"/chassis_type ] ||
+		read -r t <"$d"/chassis_type ||:
+	[ -n "$t" ] && is_number "$t" && t=$((0x7F & $t)) ||
+		t=0
+	[ $t -ge 0 ] && [ $t -lt ${#s[@]} ] ||
+		t=0
+	nls_config chassis
+	printf "%s" "${s[$t]}"
 }
 

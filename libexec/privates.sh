@@ -14,7 +14,7 @@ action=
 # Auto-detected or specified sub-profile name (optional)
 profile=
 
-# Auto-detected information about target disk drive
+# Auto-detected target disk information
 diskinfo=
 
 # Auto-detected hardware platform name
@@ -148,16 +148,17 @@ logprio="${SYSREST_LOGPRIO:-user.info}"
 destdir=/mnt/target
 
 # Initial mount points for auto-detecting write-protected devices
-protected_mpoints="/ /image /mnt/autorun"
+protected_mpoints="/ /image /mnt/autorun /mnt/backup"
 
-# Additional devices list for write protection when search
-# the target disk drive
+# Additional devices list for write protection while search
+# the target disk drive, restore or deploy the system
 protected_devices=
 
 # Tools which must be installed inside rescue system before recovery
 required_tools="blkid lsblk mkfs.ext4 mkfs.fat mkswap pv readlink sfdisk"
 required_tools="$required_tools md5sum sha1sum sha256sum addpart delpart"
 required_tools="$required_tools tar dd touch uname unpigz wipefs"
+required_tools="$required_tools mountpoint blockdev"
 
 # Variables list for transfer to the chroot'ed scripts
 chroot_vars="unique_clone keep_uuids remove_kernel_pattern kernel_flavours"

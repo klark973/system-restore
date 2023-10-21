@@ -47,14 +47,14 @@ validate_in_the_dir()
 
 validate_backup_images()
 {
-	local msg="${L0000:-Press Ctrl-Alt-Del to abort the computer restore.}"
+	local msg="${L0000-Press Ctrl-Alt-Del to abort the computer restore.}"
 
 	[ -n "$validate" ] ||
 		return 0
 	[ "$action" = validate ] ||
 		echo "$msg"
 	log "Validating backup images..."
-	msg="${L0000:-Please wait, validating backup images...}"
+	msg="${L0000-Please wait, validating backup images...}"
 	echo "$msg"
 	[ ! -s "$backup/update.$ziptype" ] ||
 		validate_in_the_dir "$backup"

@@ -42,41 +42,47 @@ hostnaming=copy
 
 # How to disk(s) partitioning? Available options are:
 # plain: one-drive DOS/MBR or GUID/GPT default layout.
-# timeshift: one-drive Timeshift-compatible layout.
+# timeshift: one-drive timeshift-compatible layout.
 # lvm: one-drive LVM default layout.
 # raid: multi-drives default layout.
 # hook: use user-defined partitioner.
-# Default value is "plain".
+# Default value for deploy mode is "plain".
 partitioner=plain
 
 # Source disk drives for build only one target device
 multi_targets=
 
 # The number of the source disk drives for build target
-n_targets=
+num_targets=
 
-# Target whole disk drive DEVICE name (optional)
+# Device name of the target whole disk drive (optional)
 target=
 
-# Target whole disk drive MODEL name pattern,
-# this is not used if value is empty (by default)
+# Model name pattern of the target whole disk drive
+# (optional), for example: "*SAMSUNG_MZVL21T0HCLR*"
 target_model_pattern=
 
-# Minimum of the target device size for auto-detection,
-# empty value (by default) for calculate this value by
-# sizes summa of the all used partitions
+# Minimum size of each target device for auto-detection,
+# empty value (by default) to calculate this value as
+# the sum of the sizes of all used partitions
 target_min_capacity=
 
-# Maximum of the target device size for auto-detection,
-# empty value (by default) when upper limit not used
+# Maximum size of each target device for auto-detection,
+# empty value (by default) when upper limit is not used
 target_max_capacity=
+
+# By default this field is empty. Otherwise it contains a
+# device name with the IMSM container, for example "/dev/md0".
+# If the field is non empty, looks for target devices connected
+# only to mdadm FakeRAID (IMSM), such as Intel VROC/iRST/RSTe.
+imsm_container=
+
+# 1: enable deploy or restore to removable devices
+removable=
 
 # 1: turn ON backup checksums validation before deploy
 # or restore action (by default, it is safer but longer)
 validate=1
-
-# 1: enable deploy or restore to removable devices
-removable=
 
 # Empty: generate new partition UUID's (by default for deploy)
 # 1: keep original partition UUID's (by default for restore)

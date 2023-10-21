@@ -2,8 +2,11 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
+# Determines the device name of the whole disk drive
+# for any specified device such as a disk partition
+#
 get_whole_disk()
 {
 	local varname="$1" partdev="$2"
@@ -33,94 +36,125 @@ get_whole_disk()
 	[ -z "$whole" ] || eval "$varname=\"$whole\""
 }
 
+# Populates the list of protected devices
+# with the specified mount points and/or devices
+#
 protect_boot_devices()
 {
-	local number sysfs mp pdev wdev
+	local number sysfs mp pdev
+
+	skip_mp_dev()
+	{
+		log "Mount point or device will be ignored: %s" "$1"
+	}
 
 	for mp in $protected_mpoints; do
-		[ -d "$mp" ] && mountpoint -q -- "$mp" ||
+		if [ -d "$mp" ] && mountpoint -q -- "$mp"; then
+			number="$(mountpoint -d -- "$mp")"
+		elif [ -b "$mp" ]; then
+			number="$(mountpoint -x -- "$mp")"
+		else
+			skip_mp_dev "$mp"
 			continue
-		number="$(mountpoint -d -- "$mp")"
-		sysfs="$(readlink -fv -- "/sys/dev/block/$number")"
-		pdev="$(grep -sE ^DEVNAME= "$sysfs"/uevent |cut -f2 -d=)"
+		fi
+
+		sysfs="$(readlink -fv -- "/sys/dev/block/$number" 2>/dev/null)" &&
+		pdev="$(sed -n -E 's/^DEVNAME=//p' "$sysfs"/uevent 2>/dev/null)" &&
 		[ -n "$pdev" ] ||
-			continue
+			skip_mp_dev "$mp" && continue
 		pdev="/dev/$pdev"
 		[ -b "$pdev" ] ||
-			continue
-		wdev="$pdev"
-		get_whole_disk wdev "$pdev"
-		in_array "$wdev" $protected_devices ||
-			protected_devices="$protected_devices $wdev"
+			skip_mp_dev "$mp" && continue
+		get_whole_disk pdev "$pdev"
+
+		if [ -z "$pdev" ] || [ ! -b "$pdev" ]; then
+			skip_mp_dev "$mp"
+		elif ! in_array "$pdev" $protected_devices; then
+			protected_devices="$protected_devices $pdev"
+			log "Added to WP-list: %s => %s" "$mp" "$pdev"
+		fi
 	done
 
-	log "Protected boot devices:$protected_devices"
+	log "Protected devices:$protected_devices"
 }
 
+# Determines a size of the specified whole disk drive
+#
 get_disk_size()
 {
-	local dname="$1" nblocks disksize
+	local dname="$1" nblocks disksize=0
 	local sysfs="/sys/block/${dname##/dev/}"
 
 	if [ ! -s "$sysfs/size" ]; then
 		disksize="$(blockdev --getsize64 -- "/dev/${dname##/dev/}")"
 	else
-		read -r nblocks <"$sysfs/size" 2>/dev/null ||:
+		read -r nblocks <"$sysfs/size" 2>/dev/null &&
 		disksize="$(( ${nblocks:-0} * 512 ))"
 	fi
 
 	echo -n "$disksize"
 }
 
+# Reads information about specified whole disk drive
+#
 get_disk_info()
 {
-	local field=
+	local di="" field=
 	local dev="${target##/dev/}"
 
-	[ ! -r "/sys/block/$dev/device/model" ] ||
-		read -r field <"/sys/block/$dev/device/model" ||:
+	[ ! -r "/sys/block/$dev/device/vendor" ] ||
+		read -r di <"/sys/block/$dev/device/vendor" 2>/dev/null ||:
+	[ ! -r "/sys/block/$dev/device/model" ]  ||
+		read -r field <"/sys/block/$dev/device/model" 2>/dev/null ||:
 	[ -z "$field" ] ||
-		diskinfo="$field"
+		di="${di:+$di }$field"
 	field=
 	[ ! -r "/sys/block/$dev/device/serial" ] ||
-		read -r field <"/sys/block/$dev/device/serial" ||:
+		read -r field <"/sys/block/$dev/device/serial" 2>/dev/null ||:
 	[ -z "$field" ] ||
-		diskinfo="${diskinfo:+$diskinfo }${field}"
+		di="${di:+$di }(s/n: $field)"
+	if [ -n "$mult_targets" ]; then
+		diskinfo=( "${diskinfo[@]}" "$target=$di" )
+	else
+		diskinfo="$di"
+	fi
 }
 
-search_target_drive()
+# Tries to auto-detect the target device if one has not been specified
+#
+search_target_device()
 {
-	local dev dsz cnt=0 msz=""
+	local dev msz xsz dsz cnt=0
 
-	# Calculating minimal required capacity of the target disk drive
-	if [ -n "$min_target_size" ] && [ "$action" = deploy ]; then
-		msz="$(human2size "$min_target_size")"
-	elif [ "$action" = fullrest ]; then
-		: TODO...
-	elif [ "$action" = deploy ]; then
-		: TODO...
-	fi
+	# Calculating bounds of the target device capacity
+	[ -z "$target_min_capacity" ] && msz="" ||
+		msz="$(human2size "$target_min_capacity")"
+	[ -z "$target_max_capacity" ] && xsz="" ||
+		xsz="$(human2size "$target_max_capacity")"
+	dsz=""
 
-	# Checking the explicity specified target disk drive
+	# Checking an explicity specified target device
 	if [ -n "$target" ]; then
-		[ -b "$target" ] ||
-			fatal F000 "Invalid target disk drive specified!"
+		get_whole_disk dev "$target"
+		[ -b "$target" ] && [ "${dev-}" = "$target" ] && [ -z "$multi_targets" ] ||
+			fatal F000 "Invalid target device specified: '%s'!" "$target"
 		! in_array "$target" $protected_devices ||
-			fatal F000 "Specified target disk drive is protected!"
-		if [ -n "$msz" ]; then
+			fatal F000 "Specified target device (%s) is write protected!" "$target"
+		[ -z "$msz" ] && [ -z "$xsz" ] ||
 			dsz="$(get_disk_size "$target")"
-			[ "$dsz" -ge "$msz" ] 2>/dev/null ||
-				fatal F000 "Specified target disk drive is too small!"
-		fi
+		[ -z "$msz" ] || [ "$dsz" -ge "$msz" ] 2>/dev/null ||
+			fatal F000 "Specified target device (%s) is too small!" "$target"
+		[ -z "$xsz" ] || [ "$dsz" -le "$xsz" ] 2>/dev/null ||
+			fatal F000 "Specified target device (%s) is too big!" "$target"
 		get_disk_info
-		log "Target disk drive checked: ${target}${diskinfo:+ ($diskinfo)}"
+		log "Specified target device: ${target}${diskinfo:+ - $diskinfo}"
 		return 0
 	fi
 
-	# Searching target disk drive
+	# Searching the target device
 	for dev in $(ls /sys/block/); do
 		case "$dev" in
-		loop[0-9]*|ram[0-9]*|sr[0-9]*|dm-[0-9]*|md[0-9]*|_)
+		loop[0-9]*|ram[0-9]*|sr[0-9]*|dm-[0-9]*|md[0-9]*)
 			continue
 			;;
 		esac
@@ -146,10 +180,10 @@ search_target_drive()
 		fatal F000 "Target disk drive must be specified!"
 	target="/dev/$target"
 	get_disk_info
-	log "Target disk drive found: ${target}${diskinfo:+ ($diskinfo)}"
+	log "Target device found: ${target}${diskinfo:+ - $diskinfo}"
 }
 
-# Wipe the target disk drive and all partitions
+# Wipe a target disk drive and all partitions
 #
 wipe_target()
 {
@@ -192,7 +226,7 @@ gpt_part_label()
 	LC_ALL=C run $cmd - "$target" "$1" "$2" >/dev/null 2>&1 ||:
 }
 
-# Create disk label and apply the partitioning schema
+# Create disk label and apply a partitioning schema
 #
 apply_schema()
 {

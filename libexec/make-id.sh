@@ -10,6 +10,8 @@
 
 d=/sys/class/dmi/id
 [ -d "$d" ] ||
+	d=/sys/devices/virtual/dmi/id
+[ -d "$d" ] ||
 	fatal F000 "DMI Information is not supported on this platform."
 mkdir -p -m0755 id
 umask 0022

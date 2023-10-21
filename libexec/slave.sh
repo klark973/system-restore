@@ -156,7 +156,8 @@ if [ -n "$remove_kernel_pattern" ]; then
 	[ -z "$old_kernel" ] || log "OLD Linux kernel detected: %s" "$old_kernel"
 fi
 
-# Determinating target system has rpm executable and valid RPM database
+# Determinating whether an rpm executable file and
+# a valid RPM database are present on the target system
 if [ -z "$have_rpmdb" ] && command -v rpm >/dev/null; then
 	[ "x$(rpm -qa 2>/dev/null |wc -l)" = x0 ] || have_rpmdb=1
 elif [ "$have_rpmdb" = 2 ]; then
@@ -177,7 +178,7 @@ then
 	run ssh-keygen -A
 fi
 
-# Backup/profile defined logic here
+# Backup/profile defined logic is here
 chroot_main
 
 # Removing old Linux kernel with modules

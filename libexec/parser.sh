@@ -11,7 +11,7 @@
 show_usage()
 {
 	local msg="Invalid command-line usage."
-	msg="$msg\nTry '%s -h' for more details."
+	msg="${L0000-$msg\nTry '%s -h' for more details.}"
 
 	if [ "$#" != 0 ]; then
 		local fmt="$1"; shift
@@ -23,7 +23,7 @@ show_usage()
 
 set_action()
 {
-	local msg="${L0000:-The action already specified: '%s'.}"
+	local msg="${L0000-The action already specified: '%s'.}"
 
 	[ -z "$action" ] ||
 		show_usage "$msg" "$action"
@@ -32,7 +32,7 @@ set_action()
 
 check_arg()
 {
-	local msg="${L0000:-After the option '%s' you should specify %s!.}"
+	local msg="${L0000-After the option '%s' you should specify %s!.}"
 
 	[ -n "$2" ] && [ "x$2" != "x--" ] ||
 		show_usage "$msg" "$1" "$3"
@@ -108,12 +108,13 @@ parse_cmdline()
 			;;
 		-s|--system)
 			set_action sysrest
+			partitioner=none
 			use_target=1
 			keep_uuids=1
 			;;
 
 		-b|--backup)
-			check_arg --backup "${2-}" "${L0000:-backup directory or storage}"
+			check_arg --backup "${2-}" "${L0000-backup directory or storage}"
 			case "${2-}" in
 			ftp://*)
 				backup=
@@ -136,14 +137,14 @@ parse_cmdline()
 				remote_server="${2:6}"
 				;;
 			file://*)
-				msg="${L0000:-Directory not found: '%s'.}"
+				msg="${L0000-Directory not found: '%s'.}"
 				[ -d "${2:7}" ] ||
 					show_usage "$msg" "${2:7}"
 				backup="$(realpath -- "${2:7}")"
 				backup_proto=file
 				;;
 			*) # local filesystem too
-				msg="${L0000:-Directory not found: '%s'.}"
+				msg="${L0000-Directory not found: '%s'.}"
 				[ -d "$2" ] ||
 					show_usage "$msg" "$2"
 				backup="$(realpath -- "$2")"
@@ -154,14 +155,14 @@ parse_cmdline()
 			;;
 
 		-p|--profile)
-			check_arg --profile "${2-}" "${L0000:-profile name}"
+			check_arg --profile "${2-}" "${L0000-profile name}"
 			profile="$2"
 			shift
 			;;
 
 		-x|--exclude)
-			check_arg --exclude "${2-}" "${L0000:-device or mount point}"
-			msg="${L0000:-Value for '%s' should be device or mount point.}"
+			check_arg --exclude "${2-}" "${L0000-device or mount point}"
+			msg="${L0000-Value for '%s' should be device or mount point.}"
 			[ -b "$2" ] || mountpoint -q -- "$2" ||
 				show_usage "$msg" "--exclude"
 			protected_mpoints="$protected_mpoints $2"
@@ -169,11 +170,11 @@ parse_cmdline()
 			;;
 
 		-l|--logfile)
-			check_arg --logfile "${2-}" "${L0000:-log file path}"
+			check_arg --logfile "${2-}" "${L0000-log file path}"
 			if [ "x$2" = "x-" ]; then
 				logfile=
 			else
-				msg="${L0000:-Invalid path to the log file: '%s'.}"
+				msg="${L0000-Invalid path to the log file: '%s'.}"
 				[ -d "${2%/*}" ] ||
 					show_usage "$msg" "$2"
 				[ -n "${2##*/*}" ] && logfile="$(realpath .)/$2" ||
@@ -225,7 +226,7 @@ parse_cmdline()
 		--)	shift
 			break
 			;;
-		-*)	msg="${L0000:-Unsupported option: '%s'.}"
+		-*)	msg="${L0000-Unsupported option: '%s'.}"
 			show_usage "$msg" "$1"
 			;;
 		*)	break
@@ -236,23 +237,23 @@ parse_cmdline()
 
 	# Action required
 	[ -n "$action" ] ||
-		show_usage "${L0000:-Action must be specified!}"
-	msg="${L000:-%s: the target should be an existing block special device!}"
+		show_usage "${L0000-Action must be specified!}"
+	msg="${L0000-%s: the target should be an existing block special device!}"
 
 	# Optional target(s)
 	if [ "$#" = 1 ]; then
 		[ -b "$1" ] ||
 			show_usage "$msg" "$1"
 		target="$1"
-		n_targets=1
+		num_targets=1
 	elif [ "$#" -gt 1 ]; then
 		multi_targets="$*"
-		n_targets=0
+		num_targets=0
 
 		for target in $multi_targets; do
 			[ -b "$target" ] ||
 				show_usage "$msg" "$target"
-			n_targets=$((1 + $n_targets))
+			num_targets=$((1 + $num_targets))
 		done
 
 		target=

@@ -94,7 +94,7 @@ check_backup_metadata()
 	trap exit_handler EXIT
 
 	# Checking the backup
-	echo "Checking backup and metadata..."
+	msg "${L0000-Checking backup and metadata...}"
 	for v in tgz txz tbz2; do
 		is_file_exists "META.$v" && is_file_exists "root.$v" ||
 			continue
@@ -180,7 +180,7 @@ check_backup_metadata()
 		rootsize=
 	[ "$action" != chkmeta ] ||
 		fatal F000 "Metadata checked successfully!"
-	cd - >/dev/null
+	cd - >/dev/null ||:
 }
 
 # Try to include config file or script with the user-defined hooks
@@ -262,8 +262,8 @@ check_profile()
 search_profile()
 {
 	for profile in $(get_profiles_list); do
-		is_it_that_profile || profile=
-		break
+		is_it_that_profile && break ||
+			profile=
 	done
 }
 
@@ -281,21 +281,32 @@ setup_profile()
 			search_profile
 		fi
 		if [ -n "$profile" ]; then
-			is_dir_exists "$profile" || profile=
+			is_dir_exists "$profile" ||
+				profile=
 		fi
 	fi
-	if [ -z "$hypervisor" ] && [ "$profile" != virtual ]; then
-		[ -n "$baremetal" ] || baremetal="${profile:-1}"
-	else
+	if [ -n "$hypervisor" ] || [ "$profile" = virtual ]; then
 		baremetal=
+	elif [ -z "$baremetal" ]; then
+		baremetal="${profile:-1}"
 	fi
+}
+
+# Default implementation of the additional
+# multi-drives configuration checker, it can be
+# overrided in $backup/config.sh or $backup/$profile/config.sh
+#
+multi_drives_config()
+{
+	[ "$action" != fullrest ] && [ "$action" != sysrest ] ||
+		fatal F000 "Use deploy mode with the multi-drives configuration"
 }
 
 # Default implementation of the configuration checker
 #
 __check_config()
 {
-	local tool
+	local i list=
 
 	# Resetting unused flags
 	if [ -z "$uefiboot" ]; then
@@ -339,6 +350,38 @@ __check_config()
 		unique_clone=1
 	fi
 
+	# Target(s) configuration
+	if [ -n "$target" ]; then
+		[ -n "$num_targets" ] ||
+			num_targets=1
+		target="$(readlink -fv -- "/dev/${target##/dev/}" 2>/dev/null ||:)"
+		[ "$num_targets" = 1 ] && [ -b "$target" ] && [ -z "$multi_targets" ] ||
+			fatal F000 "Invalid target drive configuration!"
+	elif [ -n "$multi_targets" ]; then
+		num_targets=0
+
+		for i in $multi_targets; do
+			i="$(readlink -fv -- "/dev/${i##/dev/}" 2>/dev/null ||:)"
+
+			if in_array "$i" $list || [ ! -b "$i" ]; then
+				list=
+				break
+			fi
+
+			list="$list $i"
+			num_targets=$((1 + $num_targets))
+		done
+
+		[ -n "$list" ] && [ "$num_targets" -gt 1 ] ||
+			fatal F000 "Invalid multi-targets configuration!"
+		multi_drives_config
+	elif [ -n "$num_targets" ]; then
+		is_number "$num_targets" && [ "$num_targets" -ge 1 ] ||
+			fatal F000 "Invalid target drive(s) configuration!"
+		[ "$num_targets" = 1 ] ||
+			multi_drives_config
+	fi
+
 	# Changing defaults
 	[ -n "$unique_clone" ] ||
 		cleanup_after=
@@ -355,9 +398,9 @@ __check_config()
 	requires_tools="$required_tools $(get_proto_requires)"
 
 	# Checking pre-requires
-	for tool in $required_tools; do
-		command -v "$tool" >/dev/null 2>&1 ||
-			fatal F000 "Required tool not found: '%s'!" "$tool"
+	for i in $required_tools; do
+		command -v "$i" >/dev/null 2>&1 ||
+			fatal F000 "Required tool not found: '%s'!" "$i"
 	done
 
 	[ "$action" != chkconf ] ||

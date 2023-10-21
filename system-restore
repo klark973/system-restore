@@ -70,7 +70,7 @@ if [ -n "${use_target-}" ]; then
 
 	check_trusted_boot_hw
 	protect_boot_devices
-	search_target_drive
+	search_target_device
 fi
 
 # Execute the primary action

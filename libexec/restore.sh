@@ -123,7 +123,7 @@ make_unique()
 	local f
 
 	log "Personification..."
-	echo; echo "Personification..."
+	msg ""; msg "Personification..."
 
 	if [ -d "$destdir"/etc ]; then
 		f="$destdir/etc/machine-id"

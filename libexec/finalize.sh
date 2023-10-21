@@ -30,10 +30,10 @@ exit_handler ||:
 # Footer text
 case "$action" in
 deploy|fullrest|sysrest)
-	echo
-	echo "Computer '$computer' successfully restored!"
-	echo "Enjoy! ;-)"
-	echo
+	msg ""
+	msg "%s '%s' successfully restored!" "$(get_chassis_type)" "$computer"
+	msg "Enjoy! ;-)"
+	msg ""
 esac
 
 # Finishing
