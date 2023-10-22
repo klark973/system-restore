@@ -14,7 +14,7 @@ set -o noglob
 set -o nounset
 set -o errtrace
 
-# Executable name
+# The executable name
 readonly progname="${0##*/}"
 
 # Full path to this script
@@ -23,7 +23,7 @@ readonly scriptname="$(realpath -- "$0")"
 # Supplimental sources
 readonly supplimental="${scriptname%/*}/libexec"
 
-# Bootstrap
+# Bootstrapping
 . "$supplimental"/defaults.sh
 [ ! -s "/etc/$progname"/restore.ini ] ||
 	. "/etc/$progname"/restore.ini
@@ -32,7 +32,7 @@ readonly supplimental="${scriptname%/*}/libexec"
 . "$supplimental"/parser.sh
 . "$supplimental"/config.sh
 
-# Catch all unexpected errors
+# Catching all unexpected errors
 trap 'unexpected_error "$LINENO" "${BASH_SOURCE[0]}"' ERR
 
 # Entry point
@@ -40,7 +40,7 @@ nls_locale_setup
 parse_cmdline "$@"
 check_prerequires
 
-# Check backup and configuration
+# Checking the backup and configuration
 if [ -n "${use_backup-}" ]; then
 	nls_config backup
 	check_backup_metadata
@@ -58,10 +58,10 @@ if [ -n "${use_backup-}" ]; then
 	check_config
 fi
 
-# Setup the logger and user interface
+# Setting up logging and user interface
 . "$supplimental"/logger.sh
 
-# Check the target disk drive
+# Checking the target disk drive
 if [ -n "${use_target-}" ]; then
 	nls_config target
 
@@ -73,7 +73,7 @@ if [ -n "${use_target-}" ]; then
 	search_target_device
 fi
 
-# Execute the primary action
+# Executing the primary action
 if [ "${action-}" = validate ]; then
 	. "$supplimental"/validate.sh
 else
@@ -82,7 +82,7 @@ else
 	. "$supplimental"/recovery.sh
 fi
 
-# Finalize recovery
+# Finalizing recovery
 [ -z "${finalact-}" ] ||
 	. "$supplimental"/finalize.sh
 exit 0
