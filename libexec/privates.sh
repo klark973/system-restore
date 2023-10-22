@@ -6,6 +6,9 @@
 
 ########################################################
 ### Internal variables, don't use it in restore.ini! ###
+###                                                  ###
+### You can still set default values for some        ###
+### privates only in /etc/system-backup/restore.ini. ###
 ########################################################
 
 # Specified action name (required)
@@ -28,28 +31,28 @@ lang=
 
 # Backup directory on the local filesystem
 # (current working directory by default)
-backup="$(realpath .)"
+backup="${backup-$(realpath .)}"
 
 # Account information for remote backup storage
-backup_proto=file
-remote_server=
-remote_path=
-remote_user=
-remote_pass=
+backup_proto="${backup_proto-file}"
+remote_server="${remote_server-}"
+remote_path="${remote_path-}"
+remote_user="${remote_user-}"
+remote_pass="${remote_pass-}"
 
 # Empty: don't show diagnostics before primary action
 # (by default), 1: show diagnostics before primary action
-show_diag=
-
-# 1 (by default): check the backup and metadata
-use_backup=1
+show_diag="${show_diag-}"
 
 # 1 (by default): enable to use user-defined hooks and
 # scripts supplied with the backup and/or sub-profile
-use_hooks=1
+use_hooks="${use_hooks-1}"
 
 # 1 (by default): show dialogs, empty: use stdout/stderr only
-use_dialog=1
+use_dialog="${use_dialog-1}"
+
+# 1 (by default): check the backup and metadata
+use_backup=1
 
 # Empty (by default): target disk drive not used, 1: target
 # disk drive must be found before start the primary action
@@ -124,7 +127,7 @@ homeuuid=
 # Empty (by default): nothing to do, exit only;
 # "reboot": reboot machine after success restore;
 # "poweroff": turn power OFF after success restore
-finalact=
+finalact="${finalact-}"
 
 # 1: nothing to do, no destructive actions, check only
 dryrun=
@@ -133,22 +136,22 @@ dryrun=
 debugging=
 
 # Empty: rewrite log file any time, 1: append to existing log file
-append_log=
+append_log="${append_log-}"
 
 # Empty: disable system logger (by default), 1: use system logger
-use_logger=
+use_logger="${use_logger-}"
 
 # Full path to the log file or empty for logging turn OFF
-logfile="/var/log/$progname.log"
+logfile="${logfile-/var/log/$progname.log}"
 
 # System logger priority
-logprio="${SYSREST_LOGPRIO:-user.info}"
+readonly logprio="${logprio-user.info}"
 
 # Temporary mount point for restore rootfs and chroot
-destdir=/mnt/target
+readonly destdir=/mnt/target
 
 # Initial mount points for auto-detecting write-protected devices
-protected_mpoints="/ /image /mnt/autorun /mnt/backup"
+protected_mpoints="${protected_mpoints-/ /image /mnt/autorun /mnt/backup}"
 
 # Additional devices list for write protection while search
 # the target disk drive, restore or deploy the system

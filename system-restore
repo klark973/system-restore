@@ -76,6 +76,8 @@ fi
 # Executing the primary action
 if [ "${action-}" = validate ]; then
 	. "$supplimental"/validate.sh
+elif [ "${action-}" = chkdisk ]; then
+	. "$supplimental"/chkdisk.sh
 else
 	nls_config restore
 
