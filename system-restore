@@ -58,7 +58,7 @@ if [ -n "${use_backup-}" ]; then
 	check_config
 fi
 
-# Setup logger and UI
+# Setup the logger and user interface
 . "$supplimental"/logger.sh
 
 # Check the target disk drive

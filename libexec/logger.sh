@@ -8,7 +8,7 @@
 ### Setup the logger and user interface for long-life processes ###
 ###################################################################
 
-# Add record to a log file and/or send the message to the system log
+# Adds a record to the log file and/or sends a message to the system log
 #
 log()
 {
@@ -24,7 +24,7 @@ log()
 	) 2>/dev/null
 }
 
-# Run a command with an optional debug logging
+# Runs a command with an optional debug logging
 #
 run()
 {
@@ -33,7 +33,7 @@ run()
 	"$@" || return $?
 }
 
-# Dump contents of the file "$1" to a log file in debug mode
+# Dumps contents of the file "$1" to the log file in debug mode
 #
 fdump()
 {

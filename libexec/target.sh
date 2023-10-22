@@ -4,7 +4,7 @@
 ###
 ### Copyright (C) 2021-2023, ALT Linux Team
 
-# Determines the device name of the whole disk drive
+# Determinates the device name of the whole disk drive
 # for any specified device such as a disk partition
 #
 get_whole_disk()
@@ -78,7 +78,7 @@ protect_boot_devices()
 	log "Protected devices:$protected_devices"
 }
 
-# Determines a size of the specified whole disk drive
+# Determinates a size of the specified whole disk drive
 #
 get_disk_size()
 {
@@ -92,7 +92,7 @@ get_disk_size()
 		disksize="$(( ${nblocks:-0} * 512 ))"
 	fi
 
-	echo -n "$disksize"
+	printf "%s" "$disksize"
 }
 
 # Reads information about specified whole disk drive
@@ -120,38 +120,93 @@ get_disk_info()
 	fi
 }
 
-# Tries to auto-detect the target device if one has not been specified
+# Placeholder: this function must be reimplemented in
+# $supplimental/part/$partitioner.sh or $backup/$partitioner.sh,
+# it must setup the target= variable in multi-drives configuration
+#
+multi_drives_setup()
+{
+	local msg="%s MUST BE overrided in partitioner!"
+
+	fatal F000 "$msg" "multi_drives_setup()"
+}
+
+# Searches for the target device if it is not specified
 #
 search_target_device()
 {
-	local dev msz xsz dsz cnt=0
+	local dev msz xsz dsz=""
+
+	# We will restore to the same disk drive where the backup was created
+	if [ "$action" = fullrest ] || [ "$action" = sysrest ]; then
+		[ -n "$target" ] ||
+			target="$(head -n1 -- "$workdir"/TARGETS  2>/dev/null ||:)"
+		target="$(readlink -fv -- "/dev/${target##/dev/}" 2>/dev/null ||:)"
+		[ -z "$target" ] ||
+			get_whole_disk dev "$target"
+		[ -b "$target" ] && [ "${dev-}" = "$target" ] ||
+			fatal F000 "Target device (%s) not found!" "$target"
+		! in_array "$target" $protected_devices ||
+			fatal F000 "Target device (%s) is write protected!" "$target"
+		get_disk_info
+		log "Selected target device: ${target}${diskinfo:+ - $diskinfo}"
+		return 0
+	fi
 
 	# Calculating bounds of the target device capacity
 	[ -z "$target_min_capacity" ] && msz="" ||
 		msz="$(human2size "$target_min_capacity")"
 	[ -z "$target_max_capacity" ] && xsz="" ||
 		xsz="$(human2size "$target_max_capacity")"
-	dsz=""
 
-	# Checking an explicity specified target device
+	local srcdisks="" models="" cnt=0
+
+	# Building a list of disks by specified pattern
+	if [ -n "$target_model_pattern" ]; then
+		srcdisks="$(glob "/dev/disk/by-id/$target_model_pattern" |
+				grep -vE '\-part[0-9]+$')"
+		for dev in $srcdisks; do
+			dev="$(readlink -fv -- "$dev" 2>/dev/null ||:)"
+			[ -z "$dev" ] || in_array "$dev" $models  ||
+				models="${models:+$models }$dev"
+		done
+		srcdisks=
+	fi
+
+	# Checking an explicitly specified target device
 	if [ -n "$target" ]; then
 		get_whole_disk dev "$target"
-		[ -b "$target" ] && [ "${dev-}" = "$target" ] && [ -z "$multi_targets" ] ||
+		[ -b "$target" ] && [ "${dev-}" = "$target" ] ||
 			fatal F000 "Invalid target device specified: '%s'!" "$target"
 		! in_array "$target" $protected_devices ||
-			fatal F000 "Specified target device (%s) is write protected!" "$target"
+			fatal F000 "Target device (%s) is write protected!" "$target"
 		[ -z "$msz" ] && [ -z "$xsz" ] ||
 			dsz="$(get_disk_size "$target")"
 		[ -z "$msz" ] || [ "$dsz" -ge "$msz" ] 2>/dev/null ||
 			fatal F000 "Specified target device (%s) is too small!" "$target"
 		[ -z "$xsz" ] || [ "$dsz" -le "$xsz" ] 2>/dev/null ||
 			fatal F000 "Specified target device (%s) is too big!" "$target"
+		[ -z "$target_model_pattern" ] || in_array "$target" $models ||
+			fatal F000 "Target device (%s) and pattern mismatch!" "$target"
 		get_disk_info
 		log "Specified target device: ${target}${diskinfo:+ - $diskinfo}"
 		return 0
 	fi
 
-	# Searching the target device
+	# Reading IMSM devices list
+	if [ -n "$imsm_container" ]; then
+		target="$(mdadm --detail-platform 2>/dev/null    |
+				grep -E '^[[:space:]]+Port[0-9]' |
+				grep -v 'no device attached'     |
+				awk '{print $3;}')"
+	fi
+
+	skip_dev()
+	{
+		log "Skipping /dev/%s because it %s" "$dev" "$1"
+	}
+
+	# Looking for target device(s)
 	for dev in $(ls /sys/block/); do
 		case "$dev" in
 		loop[0-9]*|ram[0-9]*|sr[0-9]*|dm-[0-9]*|md[0-9]*)
@@ -159,28 +214,60 @@ search_target_device()
 			;;
 		esac
 		[ -b "/dev/$dev" ] ||
-			continue
+			skip_dev "is not a block special device" && continue
 		! in_array "/dev/$dev" $protected_devices ||
-			continue
-		if [ -z "$removable" ]; then
-			: TODO...
+			skip_dev "write protected" && continue
+		if [ -z "$removable" ] && [ -r "/sys/block/$dev/removable" ]; then
+			read -r dsz <"/sys/block/$dev/removable" &&
+			[ "$dsz" = 0 ] ||
+				skip_dev "is a removable disk drive" && continue
 		fi
-		if [ -n "$msz" ]; then
-			dsz="$(get_disk_size "$dev")"
-			[ "$dsz" -ge "$msz" ] 2>/dev/null ||
-				continue
-		fi
+		[ -z "$msz" ] && [ -z "$xsz" ] ||
+			dsz="$(get_disk_size "/dev/$dev")"
+		[ -z "$msz" ] || [ "$dsz" -ge "$msz" ] 2>/dev/null ||
+			skip_dev "is less than minimum capacity" && continue
+		[ -z "$xsz" ] || [ "$dsz" -le "$xsz" ] 2>/dev/null ||
+			skip_dev "is more than maximum capacity" && continue
+		[ -z "$target_model_pattern" ] || in_array "/dev/$dev" $models  ||
+			skip_dev "does not match the pattern" && continue
+		[ -z "$imsm_container" ] || in_array "/dev/$dev" $target        ||
+			skip_dev "is not an IMSM disk drive" && continue
+		[ -z "$multi_targets"  ] || in_array "/dev/$dev" $multi_targets ||
+			skip_dev "is not listed" && continue
+		srcdisks="${srcdisks:+$srcdisks }/dev/$dev"
+		log "Device found: %s" "/dev/$dev"
 		cnt=$((1 + $cnt))
-		target="/dev/$dev"
 	done
 
-	[ "$cnt" != 0 ] ||
-		fatal F000 "Target disk drive not found!"
-	[ "$cnt" = 1 ] && [ -n "$target" ] ||
-		fatal F000 "Target disk drive must be specified!"
-	target="/dev/$target"
-	get_disk_info
-	log "Target device found: ${target}${diskinfo:+ - $diskinfo}"
+	# Checking the counter
+	if [ "$cnt" = 0 ]; then
+		fatal F000 "Target disk drive(s) not found!"
+	elif [ "$cnt" != "$num_targets" ]; then
+		dev="Not enough devices found! Requested: %s, gotten: %s."
+		fatal F000 "$dev" "$num_targets" "$cnt"
+	fi
+
+	# Final steps
+	if [ "$cnt" = 1 ]; then
+		target="$srcdisks"
+		multi_targets=
+		get_disk_info
+		log "The target device found: %s" "${target}${diskinfo:+ - $diskinfo}"
+	else
+		multi_targets="$srcdisks"
+		log "Creating multi-drives configuration..."
+
+		for target in $srcdisks; do
+			log "  - %s" "$target"
+			get_disk_info
+		done
+
+		target=
+		multi_drives_setup
+		[ -n "$target" ] ||
+			fatal F000 "Couldn't create multi-drives setup!"
+		log "The target device will be created: %s" "$target"
+	fi
 }
 
 # Wipe a target disk drive and all partitions

@@ -302,6 +302,24 @@ multi_drives_config()
 		fatal F000 "Use deploy mode with the multi-drives configuration"
 }
 
+# Default implementation for getting list of partitioner requirements,
+# it can be overrided in $supplimental/part/$partitioner.sh
+# or $backup/$partitioner.sh
+#
+get_partitioner_requires()
+{
+	: # Nothing by default
+}
+
+# Here is a place to safely setup user-defined hooks once
+# the configuration is complete, it can be overrided in
+# $backup/config.sh or $backup/$profile/config.sh
+#
+post_config_setup()
+{
+	: # Nothing by default
+}
+
 # Default implementation of the configuration checker
 #
 __check_config()
@@ -395,7 +413,26 @@ __check_config()
 		required_tools="$required_tools logger"
 	[ -z "$use_dialog" ] ||
 		required_tools="$required_tools dialog"
-	requires_tools="$required_tools $(get_proto_requires)"
+	[ "$partitioner" = raid ] ||
+		imsm_container=
+	i="$(get_proto_requires)"
+	[ -z "$i" ] ||
+		required_tools="$required_tools $i"
+	uefi2bios=
+	bios2uefi=
+
+	# Checking the partitioner and including appropriate support
+	if [ -n "$use_target" ]; then
+		if [ -s "$supplimental/part/$partitioner.sh" ]; then
+			. "$supplimental/part/$partitioner.sh"
+		elif [ "$partitioner" != none ]; then
+			is_file_exist "$partitioner.sh" ||
+				fatal F000 "The partitioner '%s' not found!" "$partitioner"
+			user_config "$partitioner.sh"
+		fi
+		i="$(get_partitioner_requires)"
+		[ -z "$i" ] || required_tools="$required_tools $i"
+	fi
 
 	# Checking pre-requires
 	for i in $required_tools; do
@@ -403,10 +440,10 @@ __check_config()
 			fatal F000 "Required tool not found: '%s'!" "$i"
 	done
 
+	# Final steps
 	[ "$action" != chkconf ] ||
 		fatal F000 "Configuration checked successfully!"
-	uefi2bios=
-	bios2uefi=
+	post_config_setup
 }
 
 # Check the final configuartion, inclusive user
