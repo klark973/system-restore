@@ -58,15 +58,20 @@ protect_boot_devices()
 			continue
 		fi
 
-		sysfs="$(readlink -fv -- "/sys/dev/block/$number" 2>/dev/null)" &&
-		pdev="$(sed -n -E 's/^DEVNAME=//p' "$sysfs"/uevent 2>/dev/null)" &&
-		[ -n "$pdev" ] ||
-			skip_mp_dev "$mp" && continue
-		pdev="/dev/$pdev"
-		[ -b "$pdev" ] ||
-			skip_mp_dev "$mp" && continue
-		get_whole_disk pdev "$pdev"
+		sysfs="$(readlink -fv -- "/sys/dev/block/$number"  2>/dev/null ||:)"
+		pdev="$(sed -n -E 's/^DEVNAME=//p' "$sysfs"/uevent 2>/dev/null ||:)"
+		if [ -z "$sysfs" ] || [ -z "$pdev" ]; then
+			skip_mp_dev "$mp"
+			continue
+		fi
 
+		pdev="/dev/$pdev"
+		if [ ! -b "$pdev" ]; then
+			skip_mp_dev "$mp"
+			continue
+		fi
+
+		get_whole_disk pdev "$pdev"
 		if [ -z "$pdev" ] || [ ! -b "$pdev" ]; then
 			skip_mp_dev "$mp"
 		elif ! in_array "$pdev" $protected_devices; then
@@ -213,27 +218,66 @@ search_target_device()
 			continue
 			;;
 		esac
-		[ -b "/dev/$dev" ] ||
-			skip_dev "is not a block special device" && continue
-		! in_array "/dev/$dev" $protected_devices ||
-			skip_dev "write protected" && continue
-		if [ -z "$removable" ] && [ -r "/sys/block/$dev/removable" ]; then
-			read -r dsz <"/sys/block/$dev/removable" &&
-			[ "$dsz" = 0 ] ||
-				skip_dev "is a removable disk drive" && continue
+
+		if [ ! -b "/dev/$dev" ]; then
+			skip_dev "is not a block special device"
+			continue
 		fi
-		[ -z "$msz" ] && [ -z "$xsz" ] ||
+
+		if [ -r "/sys/block/$dev/ro" ]; then
+			if read -r dsz <"/sys/block/$dev/ro" && [ "$dsz" != 0 ]; then
+				skip_dev "is a read-only device"
+				continue
+			fi
+		fi
+
+		if in_array "/dev/$dev" $protected_devices; then
+			skip_dev "is a write protected device"
+			continue
+		fi
+
+		if [ -z "$removable" ] && [ -r "/sys/block/$dev/removable" ]; then
+			if read -r dsz <"/sys/block/$dev/removable" && [ "$dsz" != 0 ]; then
+				skip_dev "is a removable disk drive"
+				continue
+			fi
+		fi
+
+		if [ -n "$msz" ] || [ -n "$xsz" ]; then
 			dsz="$(get_disk_size "/dev/$dev")"
-		[ -z "$msz" ] || [ "$dsz" -ge "$msz" ] 2>/dev/null ||
-			skip_dev "is less than minimum capacity" && continue
-		[ -z "$xsz" ] || [ "$dsz" -le "$xsz" ] 2>/dev/null ||
-			skip_dev "is more than maximum capacity" && continue
-		[ -z "$target_model_pattern" ] || in_array "/dev/$dev" $models  ||
-			skip_dev "does not match the pattern" && continue
-		[ -z "$imsm_container" ] || in_array "/dev/$dev" $target        ||
-			skip_dev "is not an IMSM disk drive" && continue
-		[ -z "$multi_targets"  ] || in_array "/dev/$dev" $multi_targets ||
-			skip_dev "is not listed" && continue
+		fi
+
+		if [ -n "$msz" ] && [ "$dsz" -lt "$msz" ] 2>/dev/null; then
+			skip_dev "is less than allowed capacity"
+			continue
+		fi
+
+		if [ -n "$xsz" ] && [ "$dsz" -gt "$xsz" ] 2>/dev/null; then
+			skip_dev "is more than allowed capacity"
+			continue
+		fi
+
+		if [ -n "$target_model_pattern" ]; then
+			if ! in_array "/dev/$dev" $models; then
+				skip_dev "does not match the model pattern"
+				continue
+			fi
+		fi
+
+		if [ -n "$imsm_container" ]; then
+			if ! in_array "/dev/$dev" $target; then
+				skip_dev "is not an IMSM disk drive"
+				continue
+			fi
+		fi
+
+		if [ -n "$multi_targets" ]; then
+			if ! in_array "/dev/$dev" $multi_targets; then
+				skip_dev "is not listed"
+				continue
+			fi
+		fi
+
 		srcdisks="${srcdisks:+$srcdisks }/dev/$dev"
 		log "Device found: %s" "/dev/$dev"
 		cnt=$((1 + $cnt))
@@ -242,8 +286,11 @@ search_target_device()
 	# Checking the counter
 	if [ "$cnt" = 0 ]; then
 		fatal F000 "Target disk drive(s) not found!"
-	elif [ "$cnt" != "$num_targets" ]; then
+	elif [ "$cnt" -lt "$num_targets" ]; then
 		dev="Not enough devices found! Requested: %s, gotten: %s."
+		fatal F000 "$dev" "$num_targets" "$cnt"
+	elif [ "$cnt" != "$num_targets" ] && [ "$action" != chkdisk ]; then
+		dev="Too many devices found! Requested: %s, gotten: %s."
 		fatal F000 "$dev" "$num_targets" "$cnt"
 	fi
 
@@ -253,6 +300,11 @@ search_target_device()
 		multi_targets=
 		get_disk_info
 		log "The target device found: %s" "${target}${diskinfo:+ - $diskinfo}"
+
+		if [ "$action" = chkdisk ]; then
+			msg "%s" "${target}${diskinfo:+ - $diskinfo}"
+			exit 0
+		fi
 	else
 		multi_targets="$srcdisks"
 		log "Creating multi-drives configuration..."
@@ -262,11 +314,22 @@ search_target_device()
 			get_disk_info
 		done
 
+		if [ "$action" = chkdisk ]; then
+			for target in "${diskinfo[@]}"; do
+				msg "# %s" "$target"
+			done
+		fi
+
 		target=
 		multi_drives_setup
 		[ -n "$target" ] ||
 			fatal F000 "Couldn't create multi-drives setup!"
 		log "The target device will be created: %s" "$target"
+
+		if [ "$action" = chkdisk ]; then
+			msg "%s" "$target"
+			exit 0
+		fi
 	fi
 }
 
