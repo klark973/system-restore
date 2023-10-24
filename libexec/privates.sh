@@ -51,6 +51,12 @@ use_hooks="${use_hooks-1}"
 # 1 (by default): show dialogs, empty: use stdout/stderr only
 use_dialog="${use_dialog-1}"
 
+# Empty (by default): auto-detect how partition device names
+# are created, 0: do not use "p" delimiter between the target
+# device name and partition number, 1: use "p" delimiter
+#
+ppartsep="${ppartsep-}"
+
 # 1 (by default): check the backup and metadata
 use_backup=1
 

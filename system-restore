@@ -71,6 +71,14 @@ if [ -n "${use_target-}" ]; then
 	check_trusted_boot_hw
 	protect_boot_devices
 	search_target_device
+
+	# Should we use delimiter between target device and partition number?
+	if [ "${ppartsep-}" != 1 ] && [ "${ppartsep}" != 0 ]; then
+		case "${target-}" in
+		*[0-9])	ppartsep=1;;
+		*)	ppartsep=0;;
+		esac
+	fi
 fi
 
 # Executing the primary action

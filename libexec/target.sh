@@ -333,6 +333,36 @@ search_target_device()
 	fi
 }
 
+# Returns unchangeble udev path for specified device, for example:
+# /dev/disk/by-id/nvme-SAMSUNG_MZVL21T0HCLR-00B00_S767NX0T854545
+#
+get_disk_id()
+{
+	local dev="$1"
+
+	dev="$(mountpoint -x -- "$dev")"
+	dev="$(grep -s 'S:disk/by-id/' /run/udev/data/"b$dev" \
+			2>/dev/null |head -n1 |cut -c3-)"
+	if [ -n "$dev" ] && [ -L "/dev/$dev" ]; then
+		printf "/dev/%s" "$dev"
+	else
+		printf "%s" "$1"
+	fi
+}
+
+# Return the partition device name given the target device name and
+# partition number, to correctly combine these parts the ppart flag
+# is used
+#
+devnode()
+{
+	case "$ppartsep" in
+	0) printf "%s%s" "$target" "$1";;
+	1) printf "%s%s%s" "$target" "p" "$1";;
+	*) fatal F000 "%s flag is not set!" "ppartsep";;
+	esac
+}
+
 # Wipe a target disk drive and all partitions
 #
 wipe_target()
