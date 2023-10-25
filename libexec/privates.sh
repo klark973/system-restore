@@ -5,7 +5,8 @@
 ### Copyright (C) 2021-2023, ALT Linux Team
 
 ########################################################
-### Internal variables, don't use it in restore.ini! ###
+### Internal variables, don't use it in restore.ini  ###
+### inside the backup and/or sub-profile!            ###
 ###                                                  ###
 ### You can still set default values for some        ###
 ### privates only in /etc/system-backup/restore.ini. ###
