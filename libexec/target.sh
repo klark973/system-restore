@@ -243,40 +243,40 @@ search_target_device()
 			fi
 		fi
 
-		if [ -n "$msz" ] || [ -n "$xsz" ]; then
-			dsz="$(get_disk_size "/dev/$dev")"
-		fi
+			if [ -n "$msz" ] || [ -n "$xsz" ]; then
+				dsz="$(get_disk_size "/dev/$dev")"
+			fi
 
-		if [ -n "$msz" ] && [ "$dsz" -lt "$msz" ] 2>/dev/null; then
-			skip_dev "is less than allowed capacity"
-			continue
-		fi
-
-		if [ -n "$xsz" ] && [ "$dsz" -gt "$xsz" ] 2>/dev/null; then
-			skip_dev "is more than allowed capacity"
-			continue
-		fi
-
-		if [ -n "$target_model_pattern" ]; then
-			if ! in_array "/dev/$dev" $models; then
-				skip_dev "does not match the model pattern"
+			if [ -n "$msz" ] && [ "$dsz" -lt "$msz" ] 2>/dev/null; then
+				skip_dev "is less than allowed capacity"
 				continue
 			fi
-		fi
 
-		if [ -n "$imsm_container" ]; then
-			if ! in_array "/dev/$dev" $target; then
-				skip_dev "is not an IMSM disk drive"
+			if [ -n "$xsz" ] && [ "$dsz" -gt "$xsz" ] 2>/dev/null; then
+				skip_dev "is more than allowed capacity"
 				continue
 			fi
-		fi
 
-		if [ -n "$multi_targets" ]; then
-			if ! in_array "/dev/$dev" $multi_targets; then
-				skip_dev "is not listed"
-				continue
+			if [ -n "$target_model_pattern" ]; then
+				if ! in_array "/dev/$dev" $models; then
+					skip_dev "does not match the model pattern"
+					continue
+				fi
 			fi
-		fi
+
+			if [ -n "$imsm_container" ]; then
+				if ! in_array "/dev/$dev" $target; then
+					skip_dev "is not an IMSM disk drive"
+					continue
+				fi
+			fi
+
+			if [ -n "$multi_targets" ]; then
+				if ! in_array "/dev/$dev" $multi_targets; then
+					skip_dev "is not listed"
+					continue
+				fi
+			fi
 
 		srcdisks="${srcdisks:+$srcdisks }/dev/$dev"
 		log "Device found: %s" "/dev/$dev"
