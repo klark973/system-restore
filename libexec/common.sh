@@ -148,7 +148,7 @@ glob()
 	(set +f; eval ls -X1 -- "$@" ||:) 2>/dev/null
 }
 
-# Convert human-readable size's to the long integer bytes
+# Converts human-readable sizes to long integer bytes
 #
 human2size()
 {
@@ -193,7 +193,39 @@ human2size()
 
 	is_number "$rv" ||
 		fatal F000 "Can't convert to the number!"
-	echo -n "$rv"
+	printf "%s" "$rv"
+}
+
+# Converts the actual disk size in bytes into a human-readable form
+#
+size2human()
+{
+	local real mul=1024
+	local frac s suffix='iB'
+	local sizes=( K M G T P E Z Y )
+
+	if [ "${1-}" = '-w' ]; then
+		suffix='B'
+		mul=1000
+		shift
+	fi
+
+	[ "$#" = 1 ] && is_number "${1-}" ||
+		fatal F000 "size2humman(): invalid argument(s)!"
+	real="$1"
+
+	if [ "$real" -lt "$mul" ]; then
+		printf "%d bytes" "$real"
+		return
+	fi
+
+	for s in "${sizes[@]}"; do
+		frac="$(( $real * 100 / $mul ))"
+		real="$(( $real / $mul ))"
+		[ "$real" -ge "$mul" ] || break
+	done
+
+	printf "%u.%02u %s%s" "$real" "$((frac % 100))" "$s" "$suffix"
 }
 
 # Returns string representation of the chassis type
