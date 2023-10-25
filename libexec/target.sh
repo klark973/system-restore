@@ -315,6 +315,7 @@ search_target_device()
 			for target in "${diskinfo[@]}"; do
 				msg "# %s" "$target"
 			done
+			exit 0
 		fi
 
 		target=
@@ -322,11 +323,6 @@ search_target_device()
 		[ -n "$target" ] ||
 			fatal F000 "Couldn't create multi-drives setup!"
 		log "The target device will be created: %s" "$target"
-
-		if [ "$action" = chkdisk ]; then
-			msg "%s" "$target"
-			exit 0
-		fi
 	fi
 }
 
