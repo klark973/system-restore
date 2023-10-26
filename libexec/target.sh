@@ -344,7 +344,7 @@ get_disk_id()
 }
 
 # Return the partition device name given the target device name and
-# partition number, to correctly combine these parts the ppart flag
+# partition number, to correctly combine these parts the ppartsep flag
 # is used
 #
 devnode()
