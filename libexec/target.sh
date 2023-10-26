@@ -118,8 +118,11 @@ get_disk_info()
 		read -r field <"/sys/block/$dev/device/serial" 2>/dev/null ||:
 	[ -z "$field" ] ||
 		di="${di:+$di }(s/n: $field)"
-	if [ -n "$mult_targets" ]; then
-		diskinfo=( "${diskinfo[@]}" "$target=$di" )
+	dev="$(get_disk_size "$dev")"
+	di="$(size2human -w "$dev")${di:+, $di}"
+
+	if [ -n "$multi_targets" ]; then
+		diskinfo=( "${diskinfo[@]}" "$target: $di" )
 	else
 		diskinfo="$di"
 	fi
@@ -140,6 +143,8 @@ multi_drives_setup()
 #
 search_target_device()
 {
+	[ -n "$num_targets" ] ||
+		num_targets=1
 	__search_target_device_intl
 
 	# Should we use delimiter between target device and partition number?
@@ -169,7 +174,7 @@ __search_target_device_intl()
 		! in_array "$target" $protected_devices ||
 			fatal F000 "Target device (%s) is write protected!" "$target"
 		get_disk_info
-		log "Selected target device: ${target}${diskinfo:+ - $diskinfo}"
+		log "Selected target device: $target: $diskinfo"
 		return 0
 	fi
 
@@ -209,7 +214,7 @@ __search_target_device_intl()
 		[ -z "$target_model_pattern" ] || in_array "$target" $models ||
 			fatal F000 "Target device (%s) and pattern mismatch!" "$target"
 		get_disk_info
-		log "Specified target device: ${target}${diskinfo:+ - $diskinfo}"
+		log "Specified target device: $target: $diskinfo"
 		return 0
 	fi
 
@@ -311,10 +316,10 @@ __search_target_device_intl()
 		target="$srcdisks"
 		multi_targets=
 		get_disk_info
-		log "The target device found: %s" "${target}${diskinfo:+ - $diskinfo}"
+		log "The target device found: %s" "$target: $diskinfo"
 
 		if [ "$action" = chkdisk ]; then
-			msg "%s" "${target}${diskinfo:+ - $diskinfo}"
+			msg "%s" "$target: $diskinfo"
 			exit 0
 		fi
 	else
