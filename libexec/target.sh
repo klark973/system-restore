@@ -136,9 +136,24 @@ multi_drives_setup()
 	fatal F000 "$msg" "multi_drives_setup()"
 }
 
-# Searches for the target device if it is not specified
+# Searches for the target device if it is not specified (function-wrapper)
 #
 search_target_device()
+{
+	__search_target_device_intl
+
+	# Should we use delimiter between target device and partition number?
+	if [ "$ppartsep" != 1 ] && [ "$ppartsep" != 0 ]; then
+		case "$target" in
+		*[0-9])	ppartsep=1;;
+		*)	ppartsep=0;;
+		esac
+	fi
+}
+
+# Internal part of search_target_device() function
+#
+__search_target_device_intl()
 {
 	local dev msz xsz dsz=""
 
