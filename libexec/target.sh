@@ -129,23 +129,45 @@ get_disk_info()
 }
 
 # Placeholder: this function must be reimplemented in
-# $supplimental/part/$partitioner.sh or $backup/$partitioner.sh,
-# it must setup the target= variable in multi-drives configuration
+# $utility/part/$partitioner.sh or $backup/$partitioner.sh,
+# it must setup the $target variable in multi-drives configuration
 #
 multi_drives_setup()
 {
-	local msg="%s MUST BE overrided in partitioner!"
+	local msg="%s MUST BE overridden in partitioner!"
 
 	fatal F000 "$msg" "multi_drives_setup()"
 }
 
-# Searches for the target device if it is not specified (function-wrapper)
+# Placeholder: this function must be reimplemented in
+# $utility/part/$partitioner.sh or $backup/$partitioner.sh,
+# it creates a disk label and applies a new partition scheme
+#
+apply_scheme()
+{
+	local msg="%s MUST BE overridden in partitioner!"
+
+	fatal F000 "$msg" "apply_scheme()"
+}
+
+# Placeholder: this function must be reimplemented in
+# $utility/part/$partitioner.sh or $backup/$partitioner.sh,
+# it must assign paths for all partition device nodes
+#
+define_parts()
+{
+	local msg="%s MUST BE overridden in partitioner!"
+
+	fatal F000 "$msg" "define_parts()"
+}
+
+# A wrapper function which looks for a target device if one is not specified
 #
 search_target_device()
 {
-	[ -n "$num_targets" ] ||
+	[ -n "$num_targets" ] && is_number "$num_targets" ||
 		num_targets=1
-	__search_target_device_intl
+	__search_tgtdev_intl
 
 	# Should we use delimiter between target device and partition number?
 	if [ "$ppartsep" != 1 ] && [ "$ppartsep" != 0 ]; then
@@ -156,9 +178,9 @@ search_target_device()
 	fi
 }
 
-# Internal part of search_target_device() function
+# Internal part of the function search_target_device()
 #
-__search_target_device_intl()
+__search_tgtdev_intl()
 {
 	local dev msz xsz dsz=""
 
@@ -189,7 +211,7 @@ __search_target_device_intl()
 	# Building a list of disks by specified pattern
 	if [ -n "$target_model_pattern" ]; then
 		srcdisks="$(glob "/dev/disk/by-id/$target_model_pattern" |
-				grep -vE '\-part[0-9]+$')"
+				grep -vsE '\-part[0-9]+$')"
 		for dev in $srcdisks; do
 			dev="$(readlink -fv -- "$dev" 2>/dev/null ||:)"
 			[ -z "$dev" ] || in_array "$dev" $models  ||
@@ -263,7 +285,7 @@ __search_target_device_intl()
 			fi
 		fi
 
-		if [ "$action" != chkdisk ]; then
+		if [ "$action" != scandisk ]; then
 			if [ -n "$msz" ] || [ -n "$xsz" ]; then
 				dsz="$(get_disk_size "/dev/$dev")"
 			fi
@@ -306,7 +328,7 @@ __search_target_device_intl()
 	elif [ "$cnt" -lt "$num_targets" ]; then
 		dev="Not enough devices found! Requested: %s, gotten: %s."
 		fatal F000 "$dev" "$num_targets" "$cnt"
-	elif [ "$cnt" != "$num_targets" ] && [ "$action" != chkdisk ]; then
+	elif [ "$cnt" != "$num_targets" ] && [ "$action" != scandisk ]; then
 		dev="Too many devices found! Requested: %s, gotten: %s."
 		fatal F000 "$dev" "$num_targets" "$cnt"
 	fi
@@ -318,7 +340,7 @@ __search_target_device_intl()
 		get_disk_info
 		log "The target device found: %s" "$target: $diskinfo"
 
-		if [ "$action" = chkdisk ]; then
+		if [ "$action" = scandisk ]; then
 			msg "%s" "$target: $diskinfo"
 			exit 0
 		fi
@@ -331,7 +353,7 @@ __search_target_device_intl()
 			get_disk_info
 		done
 
-		if [ "$action" = chkdisk ]; then
+		if [ "$action" = scandisk ]; then
 			for target in "${diskinfo[@]}"; do
 				msg "# %s" "$target"
 			done
@@ -364,8 +386,8 @@ get_disk_id()
 }
 
 # Return the partition device name given the target device name and
-# partition number, to correctly combine these parts the ppartsep flag
-# is used
+# partition number.  To correctly combine these parts, the ppartsep
+# flag is used.
 #
 devnode()
 {
@@ -376,58 +398,139 @@ devnode()
 	esac
 }
 
-# Wipe a target disk drive and all partitions
+# Wipes specified devices and all partitions on them, it can be
+# overridden in $utility/part/$partitioner.sh or $backup/$partitioner.sh
 #
-wipe_target()
+wipe_targets()
 {
-	: TODO...
+	local dev plist devices="$*"
+
+	# Stopping all subsystems only once
+	if [ -z "${__subsystems_stopped-}" ]; then
+		log "Stopping all subsystems..."
+
+		( set +e
+		  set +E
+		  swapoff -a
+		  vgchange -a n
+		  mdadm --stop --scan
+		  vgchange -a n
+		  mdadm --stop --scan
+		) &>/dev/null ||:
+
+		__subsystems_stopped=1
+	fi
+
+	[ -n "$devices" ] ||
+		devices="${multi_targets:-$target}"
+	log "Wiping device(s): %s..." "$devices"
+
+	for dev in $devices; do
+		plist="$(set +f; ls -r "$dev"?*)"
+
+		( set +e
+		  set +E
+		  [ -z "$plist" ] ||
+			wipefs -a $plist
+		  mdadm --zero-superblock "$dev"
+		  dd if=/dev/zero bs=1M count=2 of="$dev"
+		  wipefs -a "$dev"
+		  sync "$dev"
+		  udevadm trigger -q "$dev"
+		) &>/dev/null ||:
+	done
+
+	run udevadm settle -t5 >/dev/null ||:
 }
 
+# Tells the kernel to reread a partition table on the specified device
+# and waits for new partitions to be ready. If device is not specified,
+# the target disk drive will be used.
+#
 rereadpt()
 {
-	local i ndev="$1"
-	local start lenght
-	local partname devpath
+	local n junk partname start lenght device="${1-}"
+	local cmd="LC_ALL=C sfdisk -q -f -l --color=never"
 
-	for i in $(seq 1 $ndev); do
-		partname="$(devnode $i)"
-		devpath="$(LC_ALL=C sfdisk -f -l -- "$target" |
-				grep -s "$partname " |
-				sed 's/  */ /g')"
-		start="$(echo "$devpath" |cut -f2 -d' ')"
-		lenght="$(echo "$devpath" |cut -f4 -d' ')"
-		run addpart "$target" "$i" "$start" "$lenght" >/dev/null 2>&1 ||:
+	[ -n "$device" ] ||
+		device="$target"
+	log "Telling the kernel that the partition table on %s has been changed" "$device"
+
+	run sync "$device" ||:
+
+	run $cmd -- "$device" |sed '1d;s/  */ /g' |
+	while IFS=' ' read -r partname start lenght junk; do
+		case "$device" in
+		*[0-9])	n="${device}p"
+			n="${partname##$n}"
+			;;
+		*)	n="${partname##$device}"
+			;;
+		esac
+		run addpart "$device" "$n" "$start" "$lenght" >/dev/null ||:
 	done
 
-	start=0
+	run udevadm trigger -q "$device" >/dev/null ||:
 
-	while [ "$start" != "$ndev" ]
-	do
-		start=0
-		sleep .2
-		for i in $(seq 1 $ndev); do
-			[ ! -b "$(devnode $i)" ] ||
-				start=$((1 + $start))
+	junk=( $($cmd -- "$device" |sed '1d;s/ .*//g') )
+	n="${#junk[@]}"; lenght="$n"
+	log "Waiting for new partitions from the kernel to appear..."
+
+	while :; do
+		for partname in "${junk[@]}"; do
+			[ ! -b "$partname" ] ||
+				n=$(( $n - 1 ))
 		done
+		[ "$n" -gt 0 ] ||
+			break
+		n="$lenght"
+		sleep .2
 	done
+
+	run udevadm settle -t5 >/dev/null ||:
 }
 
+# Returns the UUID of the file system on the specified device
+#
+get_fs_uuid() {
+	run blkid -c /dev/null -o value -s UUID -- "$1"
+}
+
+# Returns the LABEL of the file system on the specified device
+#
+get_fs_label() {
+	run blkid -c /dev/null -o value -s LABEL -- "$1"
+}
+
+# Reads or writes a partition GUID on the specified GUID/GPT disk
+#
+gpt_part_guid()
+{
+	local device="$1" partno="$2" guid="${3-}"
+	local cmd="LC_ALL=C sfdisk -q -f --part-uuid"
+
+	[ -n "$device" ] && [ "$device" != '-' ] ||
+		device="$target"
+	if [ -n "$label" ]; then
+		run $cmd -- "$device" "$partno" "$guid" >/dev/null ||:
+	else
+		run $cmd -- "$device" "$partno" ||:
+	fi
+}
+
+# Reads or writes a partition label on the specified GUID/GPT disk
+#
 gpt_part_label()
 {
-	local cmd="sfdisk -q -f --part-label"
+	local device="$1" partno="$2" label="${3-}"
+	local cmd="LC_ALL=C sfdisk -q -f --part-label"
 
-	LC_ALL=C run $cmd - "$target" "$1" "$2" >/dev/null 2>&1 ||:
-}
-
-# Create disk label and apply a partitioning schema
-#
-apply_schema()
-{
-	: TODO...
-}
-
-define_parts()
-{
-	: TODO...
+	[ -n "$device" ] && [ "$device" != '-' ] ||
+		device="$target"
+	if [ -n "$label" ]; then
+		run $cmd -- "$device" "$partno" "$label" >/dev/null ||:
+	else
+		run $cmd -- "$device" "$partno" ||:
+	fi
 }
 

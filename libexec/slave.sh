@@ -22,7 +22,7 @@ efivarfs=
 
 
 # Default ALT-specific logic with make-initrd,
-# can be overrided in arch/$platform.sh
+# can be overridden in arch/$platform.sh
 #
 __specialize_kver()
 {
@@ -52,7 +52,7 @@ __specialize_kver()
 }
 
 # Default ALT-specific logic with make-initrd,
-# can be overrided in arch/$platform.sh
+# can be overridden in arch/$platform.sh
 #
 __specialize_platform()
 {
@@ -89,14 +89,14 @@ __specialize_platform()
 }
 
 # Special hook for platform-specific function,
-# it can be overrided in arch/$platform.sh
+# it can be overridden in arch/$platform.sh
 #
 setup_bootloaders_platform()
 {
 	log "setup_bootloaders_platform() not used"
 }
 
-# It can be overrided in $backup/chroot.sh
+# It can be overridden in $backup/chroot.sh
 # and/or in $backup/$profile/chroot.sh
 #
 specialize()
@@ -104,7 +104,7 @@ specialize()
 	__specialize_platform
 }
 
-# Can be overrided in $backup/chroot.sh
+# It can be overridden in $backup/chroot.sh
 # and/or in $backup/$profile/chroot.sh
 #
 setup_bootloaders()
@@ -112,7 +112,7 @@ setup_bootloaders()
 	setup_bootloaders_platform
 }
 
-# Can be overrided in $backup/chroot.sh
+# It can be overridden in $backup/chroot.sh
 # and/or in $backup/$profile/chroot.sh
 #
 chroot_main()

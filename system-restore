@@ -20,17 +20,17 @@ readonly progname="${0##*/}"
 # Full path to this script
 readonly scriptname="$(realpath -- "$0")"
 
-# Supplimental sources
-readonly supplimental="${scriptname%/*}/libexec"
+# Supplemental sources
+readonly utility="${scriptname%/*}/libexec"
 
 # Bootstrapping
-. "$supplimental"/defaults.sh
+. "$utility"/defaults.sh
 [ ! -s "/etc/$progname"/restore.ini ] ||
 	. "/etc/$progname"/restore.ini
-. "$supplimental"/privates.sh
-. "$supplimental"/common.sh
-. "$supplimental"/parser.sh
-. "$supplimental"/config.sh
+. "$utility"/privates.sh
+. "$utility"/common.sh
+. "$utility"/parser.sh
+. "$utility"/config.sh
 
 # Catching all unexpected errors
 trap 'unexpected_error "$LINENO" "${BASH_SOURCE[0]}"' ERR
@@ -59,14 +59,14 @@ if [ -n "${use_backup-}" ]; then
 fi
 
 # Setting up logging and user interface
-. "$supplimental"/logger.sh
+. "$utility"/logger.sh
 
 # Checking the target disk drive
 if [ -n "${use_target-}" ]; then
 	nls_config target
 
-	. "$supplimental"/trusted.sh
-	. "$supplimental"/target.sh
+	. "$utility"/trusted.sh
+	. "$utility"/target.sh
 
 	check_trusted_boot_hw
 	protect_boot_devices
@@ -75,15 +75,15 @@ fi
 
 # Executing the primary action
 if [ "${action-}" = validate ]; then
-	. "$supplimental"/validate.sh
+	. "$utility"/validate.sh
 else
 	nls_config restore
 
-	. "$supplimental"/recovery.sh
+	. "$utility"/recovery.sh
 fi
 
 # Finalizing recovery
 [ -z "${finalact-}" ] ||
-	. "$supplimental"/finalize.sh
+	. "$utility"/finalize.sh
 exit 0
 

@@ -23,9 +23,9 @@ setup_privates_platform()
 {
 	[ -z "$uefiboot" ] && [ -z "$esp_size" ] ||
 		fatal F000 "UEFI boot is not supported on %s!" "$platform"
-	[ "$pt_schema" = dos ] || [ -n "$bbp_size" ] ||
+	[ "$pt_scheme" = dos ] || [ -n "$bbp_size" ] ||
 		fatal F000 "BIOS Boot partition size is not defined!"
-	[ "$pt_schema" = gpt ] || bbp_size=
+	[ "$pt_scheme" = gpt ] || bbp_size=
 	biosboot_too=
 	uefi2bios=
 	bios2uefi=

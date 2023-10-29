@@ -12,7 +12,7 @@ d=/sys/class/dmi/id
 [ -d "$d" ] ||
 	d=/sys/devices/virtual/dmi/id
 [ -d "$d" ] ||
-	fatal F000 "DMI Information is not supported on this platform."
+	fatal F000 "DMI information is not supported on this platform."
 mkdir -p -m0755 id
 umask 0022
 
@@ -42,6 +42,6 @@ do
 done
 
 # Try to remove empty directory
-rmdir id 2>/dev/null && fatal F000 "DMI Information records not found." ||:
+rmdir id 2>/dev/null && fatal F000 "DMI information records not found." ||:
 
 exit 0

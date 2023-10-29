@@ -12,8 +12,8 @@
 #
 nls_config()
 {
-	[ ! -s "$supplimental/l10n/$lang/$1.sh" ] ||
-		. "$supplimental/l10n/$lang/$1.sh"
+	[ ! -s "$utility/l10n/$lang/$1.sh" ] ||
+		. "$utility/l10n/$lang/$1.sh"
 }
 
 # Enable native language support
@@ -24,7 +24,7 @@ nls_locale_setup()
 	lang="${LC_ALL:-$lang}"
 	lang="${LC_MESSAGES:-$lang}"
 	lang="${lang%.*}"
-	[ -n "$lang" ] && [ -s "$supplimental/l10n/$lang"/help.msg ] ||
+	[ -n "$lang" ] && [ -s "$utility/l10n/$lang"/help.msg ] ||
 		lang="en_US"
 	nls_config common
 }
@@ -59,21 +59,21 @@ msg()
 	printf "$fmt\n" "$@"
 }
 
-# Base implementation, it will be overrided in logger.sh
+# Base implementation, it will be overridden in logger.sh
 #
 log()
 {
 	: # Nothing by default
 }
 
-# Base implementation, it will be overrided in logger.sh
+# Base implementation, it will be overridden in logger.sh
 #
 run()
 {
 	"$@" || return $?
 }
 
-# Base implementation, it will be overrided in dialogs.sh
+# Base implementation, it will be overridden in dialogs.sh
 #
 show_error()
 {
@@ -97,7 +97,7 @@ __exit_handler()
 	return $rv
 }
 
-# Can be overrided in $backup/config.sh, $backup/restore.sh,
+# It can be overridden in $backup/config.sh, $backup/restore.sh,
 # $backup/$profile/config.sh or $backup/$profile/restore.sh
 #
 exit_handler()

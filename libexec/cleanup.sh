@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 #######################################################
 ### Optional cleanup rootfs after deploy or restore ###
@@ -214,7 +214,7 @@ __cleanup_parts()
 	cd -
 }
 
-# Can be overrided in $backup/cleanup.sh
+# It can be overridden in $backup/cleanup.sh
 # or $backup/$profile/cleanup.sh
 #
 cleanup_home()
@@ -222,7 +222,7 @@ cleanup_home()
 	__cleanup_home
 }
 
-# Can be overrided in $backup/cleanup.sh
+# It can be overridden in $backup/cleanup.sh
 # or $backup/$profile/cleanup.sh
 #
 cleanup_logs()
@@ -230,7 +230,7 @@ cleanup_logs()
 	__cleanup_logs
 }
 
-# Can be overrided in $backup/cleanup.sh
+# It can be overridden in $backup/cleanup.sh
 # or $backup/$profile/cleanup.sh
 #
 cleanup_var()
@@ -238,7 +238,7 @@ cleanup_var()
 	__cleanup_var
 }
 
-# Can be overrided in $backup/cleanup.sh
+# It can be overridden in $backup/cleanup.sh
 # or $backup/$profile/cleanup.sh
 #
 cleanup_boot()
@@ -246,7 +246,7 @@ cleanup_boot()
 	__cleanup_boot
 }
 
-# Can be overrided in $backup/cleanup.sh
+# It can be overridden in $backup/cleanup.sh
 # or $backup/$profile/cleanup.sh
 #
 cleanup_root()
@@ -254,7 +254,7 @@ cleanup_root()
 	__cleanup_root
 }
 
-# Can be overrided in $backup/cleanup.sh
+# It can be overridden in $backup/cleanup.sh
 # or $backup/$profile/cleanup.sh
 #
 cleanup_parts()

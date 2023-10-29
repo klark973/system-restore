@@ -55,7 +55,7 @@ setup_logger()
 	[ -n "$append_log" ] || [ -z "$logfile" ] ||
 		:> "$logfile"
 	[ -z "$use_dialog" ] ||
-		. "$supplimental"/dialogs.sh
+		. "$utility"/dialogs.sh
 	log "Started with arguments: %s" "$*"
 }
 

@@ -5,7 +5,7 @@
 ### Copyright (C) 2021-2023, ALT Linux Team
 
 # Special hook for platform-specific function,
-# it can be overrided in arch/$platform.sh
+# it can be overridden in arch/$platform.sh
 #
 check_prereq_platform()
 {
@@ -13,7 +13,7 @@ check_prereq_platform()
 }
 
 # Special hook for platform-specific function,
-# it can be overrided in arch/$platform.sh
+# it can be overridden in arch/$platform.sh
 #
 setup_privates_platform()
 {
@@ -43,16 +43,16 @@ check_prerequires()
 
 	# Including support for this platform
 	v="Platform '%s' is not supported yet!"
-	[ -s "$supplimental/arch/$platform.sh" ] ||
+	[ -s "$utility/arch/$platform.sh" ] ||
 		fatal F000 "$v" "$platform"
-	. "$supplimental/arch/$platform.sh"
+	. "$utility/arch/$platform.sh"
 	check_prereq_platform
 }
 
 # Default implementation for check <volume>.sfdisk files
-# and auto-detect partitioning schema inside the backup.
+# and auto-detect partitioning scheme inside the backup.
 # In some cases this is not very good when underlying disks
-# aren't partitioned, it can be overrided in $backup/config.sh
+# aren't partitioned, it can be overridden in $backup/config.sh
 #
 check_volume_layouts()
 {
@@ -62,16 +62,16 @@ check_volume_layouts()
 		[ -s "$v.sfdisk" ] ||
 			fatal F000 "%s.sfdisk required!" "$v"
 		if grep -qsE '^label: gpt$' "$v.sfdisk"; then
-			pt_schema=gpt
-		elif [ -z "$pt_schema" ] &&
+			pt_scheme=gpt
+		elif [ -z "$pt_scheme" ] &&
 			grep -qsE '^label: dos$' "$v.sfdisk"
 		then
-			pt_schema=dos
+			pt_scheme=dos
 		fi
 		cnt=$((1 + $cnt))
 	done
 	#
-	[ -n "$pt_schema" ] ||
+	[ -n "$pt_scheme" ] ||
 		fatal F000 "Metadata for target device(s) not found!"
 	if [ "$cnt" != 1 ]; then
 		case "$action" in
@@ -245,7 +245,7 @@ is_it_that_profile()
 }
 
 # Default implementation for check specified profile,
-# it can be overrided in $backup/config.sh
+# it can be overridden in $backup/config.sh
 #
 check_profile()
 {
@@ -257,7 +257,7 @@ check_profile()
 }
 
 # Default implementation for auto-detect profile,
-# it can be overrided in $backup/config.sh
+# it can be overridden in $backup/config.sh
 #
 search_profile()
 {
@@ -294,7 +294,7 @@ setup_profile()
 
 # Default implementation of the additional
 # multi-drives configuration checker, it can be
-# overrided in $backup/config.sh or $backup/$profile/config.sh
+# overridden in $backup/config.sh or $backup/$profile/config.sh
 #
 multi_drives_config()
 {
@@ -303,7 +303,7 @@ multi_drives_config()
 }
 
 # Default implementation for getting list of partitioner requirements,
-# it can be overrided in $supplimental/part/$partitioner.sh
+# it can be overridden in $utility/part/$partitioner.sh
 # or $backup/$partitioner.sh
 #
 get_partitioner_requires()
@@ -312,7 +312,7 @@ get_partitioner_requires()
 }
 
 # Here is a place to safely setup user-defined hooks once
-# the configuration is complete, it can be overrided in
+# the configuration is complete, it can be overridden in
 # $backup/config.sh or $backup/$profile/config.sh
 #
 post_config_setup()
@@ -362,9 +362,9 @@ __check_config()
 			swapsize="$(( $swapsize * 1024 ))M"
 		fi
 		[ -z "$force_mbr_label" ] ||
-			pt_schema=dos
+			pt_scheme=dos
 		[ -z "$force_gpt_label" ] ||
-			pt_schema=gpt
+			pt_scheme=gpt
 		unique_clone=1
 	fi
 
@@ -423,8 +423,8 @@ __check_config()
 
 	# Checking the partitioner and including appropriate support
 	if [ -n "$use_target" ]; then
-		if [ -s "$supplimental/part/$partitioner.sh" ]; then
-			. "$supplimental/part/$partitioner.sh"
+		if [ -s "$utility/part/$partitioner.sh" ]; then
+			. "$utility/part/$partitioner.sh"
 		elif [ "$partitioner" != none ]; then
 			is_file_exist "$partitioner.sh" ||
 				fatal F000 "The partitioner '%s' not found!" "$partitioner"
@@ -447,7 +447,7 @@ __check_config()
 }
 
 # Check the final configuartion, inclusive user
-# data, it can be overrided in $backup/config.sh
+# data, it can be overridden in $backup/config.sh
 # or $backup/$profile/config.sh
 #
 check_config()

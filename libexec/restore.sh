@@ -2,16 +2,16 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 # Bootstrap
 [ -z "$cleanup_after" ] ||
-	. "$supplimental"/cleanup.sh
-. "$supplimental"/restpart.sh
-. "$supplimental"/format.sh
-. "$supplimental"/chroot.sh
+	. "$utility"/cleanup.sh
+. "$utility"/restpart.sh
+. "$utility"/format.sh
+. "$utility"/chroot.sh
 
-# Can be overrided in $backup/restore.sh
+# It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh
 #
 make_unique_hostname()
@@ -45,13 +45,13 @@ setup_privates()
 		if [ "$action" = fullrest ]; then
 			dsz="Use deploy mode for restore from "
 			dsz="$dsz this backup to the disks >2Tb!"
-			[ "$pt_schema" = gpt ] ||
+			[ "$pt_scheme" = gpt ] ||
 				fatal F000 "$dsz"
 		elif [ "$action" = deploy ]; then
 			dsz="DOS/MBR labeling is inpossible with disks >2Tb!"
 			[ -z "$force_mbr_label" ] ||
 				fatal F000 "$dsz"
-			pt_schema=gpt
+			pt_scheme=gpt
 		fi
 	fi
 
@@ -60,22 +60,22 @@ setup_privates()
 	setup_privates_platform
 }
 
-# Can be overrided in $backup/restore.sh
+# It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh
 #
 make_new_fstab()
 {
-	. "$supplimental"/fstab.sh
+	. "$utility"/fstab.sh
 
 	__make_new_fstab
 }
 
-# Can be overrided in $backup/restore.sh
+# It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh
 #
 make_new_grubcfg()
 {
-	. "$supplimental"/grubcfg.sh
+	. "$utility"/grubcfg.sh
 
 	__make_new_grubcfg
 }
@@ -88,7 +88,7 @@ __replace_uuids()
 		make_new_grubcfg
 }
 
-# Can be overrided in $backup/restore.sh
+# It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh
 #
 replace_uuids()
@@ -107,7 +107,7 @@ __rename_iface()
 	log "Wired network interface was renamed to '%s'." "$wired_iface"
 }
 
-# Can be overrided in $backup/restore.sh
+# It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh
 #
 rename_iface()
@@ -115,7 +115,7 @@ rename_iface()
 	__rename_iface
 }
 
-# Can be overrided in $backup/restore.sh
+# It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh
 #
 make_unique()
@@ -165,7 +165,7 @@ clear_nvram()
 	) >/dev/null 2>&1
 }
 
-# Can be overrided in $backup/restore.sh
+# It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh
 #
 record_nvram()

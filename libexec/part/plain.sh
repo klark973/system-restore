@@ -210,13 +210,13 @@ __prepare_dos_layout()
 	fi
 }
 
-# Prepare target disk partitioning schema.
-# Can be overrided in $backup/restore.sh
+# Prepare target disk partitioning scheme.
+# It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh.
 #
-make_pt_schema()
+make_pt_scheme()
 {
 	disk_layout="$workdir/disk-layout.tmp"
-	__prepare_${pt_schema}_layout >"$disk_layout"
+	__prepare_${pt_scheme}_layout >"$disk_layout"
 }
 

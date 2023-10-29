@@ -26,7 +26,7 @@ from the prepared rootfs backup images without query user.
 %install
 mkdir -pm755 %buildroot{%_bindir,/usr/libexec,/var/log}
 install -pm755 %name %buildroot%_bindir/%name
-sed -i -e 's,^(readonly supplimental)=.*,\1="/usr/libexec/%name",' %buildroot%_bindir/%name
+sed -i -e 's,^(readonly utility)=.*,\1="/usr/libexec/%name",' %buildroot%_bindir/%name
 cp -Rf libexec %buildroot/usr/libexec/%name
 :> %buildroot/var/log/%name.log
 cat >%buildroot/usr/libexec/%name/version.sh <<EOF

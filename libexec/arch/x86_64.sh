@@ -28,9 +28,9 @@ check_prereq_platform()
 setup_privates_platform()
 {
 	# Resetting BIOS Boot partition
-	if [ "$pt_schema" = dos ]; then
+	if [ "$pt_scheme" = dos ]; then
 		bbp_size=
-	elif [ "$pt_schema" = gpt ] && [ -z "$biosboot_too" ]; then
+	elif [ "$pt_scheme" = gpt ] && [ -z "$biosboot_too" ]; then
 		bbp_size=
 	fi
 

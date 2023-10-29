@@ -2,22 +2,22 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 # Bootstrap
-. "$supplimental"/restore.sh
-. "$supplimental"/flayout.sh
+. "$utility"/restore.sh
+. "$utility"/flayout.sh
 
 do_fullrest_action()
 {
 	setup_privates
-	use_pt_schema
+	use_pt_scheme
 	[ -z "$showdiag" ] ||
-		. "$supplimental"/diaginfo.sh
+		. "$utility"/diaginfo.sh
 	[ -z "$validate" ] ||
-		. "$supplimental"/validate.sh
+		. "$utility"/validate.sh
 	wipe_target
-	apply_schema
+	apply_scheme
 	define_parts
 	format_parts
 	restsys_parts

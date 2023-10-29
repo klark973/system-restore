@@ -44,7 +44,7 @@ show_version()
 	local SYSREST_VERSION=0
 	local SYSREST_BUILD_DATE=0
 
-	. "$supplimental"/version.sh
+	. "$utility"/version.sh
 
 	printf "%s %s %s\n" "$progname" "$SYSREST_VERSION" "$SYSREST_BUILD_DATE"
 	exit 0
@@ -52,10 +52,10 @@ show_version()
 
 show_help()
 {
-	local help="$supplimental/l10n/$lang/help.msg"
+	local help="$utility/l10n/$lang/help.msg"
 
 	[ -s "$help" ] ||
-		help="$supplimental/l10n/en_US/help.msg"
+		help="$utility/l10n/en_US/help.msg"
 	sed "s/@PROG@/$progname/g" "$help"
 	exit 0
 }
@@ -86,7 +86,7 @@ parse_cmdline()
 			set_action validate
 			;;
 		-t|--scan-only)
-			set_action chkdisk
+			set_action scandisk
 			use_target=1
 			use_backup=
 			;;
@@ -260,9 +260,9 @@ parse_cmdline()
 	fi
 
 	# Creating 'id' sub-directory if it was requested
-	[ "$action" != make-id ] || . "$supplimental"/make-id.sh
+	[ "$action" != make-id ] || . "$utility"/make-id.sh
 
 	# Require support of the protocol with remote server
-	. "$supplimental"/proto/"$backup_proto".sh
+	. "$utility"/proto/"$backup_proto".sh
 }
 

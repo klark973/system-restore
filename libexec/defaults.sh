@@ -177,10 +177,10 @@ wired_iface=
 # 1: add BIOS/CSM-boot mode support (only on x86_64 if uefiboot=1)
 biosboot_too=
 
-# 1: force using GUID/GPT partitioning schema
+# 1: force using GUID/GPT partitioning scheme
 force_gpt_label=
 
-# 1: force using DOS/MBR partitioning schema
+# 1: force using DOS/MBR partitioning scheme
 force_mbr_label=
 
 # EFI System partition size (optional)

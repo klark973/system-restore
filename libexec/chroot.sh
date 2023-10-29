@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
 # Add variable(s) to the list for transfer it to the chroot
 #
@@ -80,16 +80,16 @@ prepare_chroot()
 			run cp -Lf -- "$backup/$profile"/chroot.sh "$d"/profile.sh
 	fi
 
-	run cp -Lf -- "$supplimental/arch/$platform.sh" "$d"/platform.sh
-	run cp -Lf -- "$supplimental"/version.sh "$d"/
-	run cp -Lf -- "$supplimental"/logger.sh "$d"/
-	run cp -Lf -- "$supplimental"/slave.sh "$d"/
+	run cp -Lf -- "$utility/arch/$platform.sh" "$d"/platform.sh
+	run cp -Lf -- "$utility"/version.sh "$d"/
+	run cp -Lf -- "$utility"/logger.sh "$d"/
+	run cp -Lf -- "$utility"/slave.sh "$d"/
 	run chmod -- 0755 "$d"/slave.sh "$f"
 	prepare_chroot_tbh
 }
 
 # This is a hook for user-defined function,
-# can be overrided in $backup/restore.sh
+# it can be overridden in $backup/restore.sh
 # and/or in $backup/$profile/restore.sh
 #
 before_chroot()
@@ -134,7 +134,7 @@ exec_chroot()
 }
 
 # This is a hook for user-defined function,
-# can be overrided in $backup/restore.sh
+# it can be overridden in $backup/restore.sh
 # and/or in $backup/$profile/restore.sh
 #
 after_chroot()

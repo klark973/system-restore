@@ -72,9 +72,9 @@ use_target=
 hypervisor=
 
 # Creating disk label type (auto-detected in run-time)
-# "dos": DOS/MBR partitioning schema will be used
-# "gpt": GUID/GPT partitioning schema will be used
-pt_schema=
+# "dos": DOS/MBR partitioning scheme will be used
+# "gpt": GUID/GPT partitioning scheme will be used
+pt_scheme=
 
 # 1: UEFI boot mode (auto-detected in run-time)
 uefiboot=
@@ -173,7 +173,7 @@ required_tools="$required_tools mountpoint blockdev"
 # Variables list for transfer to the chroot'ed scripts
 chroot_vars="unique_clone keep_uuids remove_kernel_pattern kernel_flavours"
 chroot_vars="$chroot_vars biosboot_too efi_distributor grub_install_opts"
-chroot_vars="$chroot_vars hypervisor platform pt_schema uefiboot target"
+chroot_vars="$chroot_vars hypervisor platform pt_scheme uefiboot target"
 chroot_vars="$chroot_vars debugging have_tbh have_nvram no_nvram have_rpmdb"
 
 # IBM Power PReP partition GUID for grub-ieee1275
