@@ -4,9 +4,9 @@
 ###
 ### Copyright (C) 2021-2023, ALT Linux Team
 
-############################################################
-### Create 'id' directory for sub-profile auto-detection ###
-############################################################
+#############################################################
+### Creates 'id' directory for sub-profile auto-detection ###
+#############################################################
 
 d=/sys/class/dmi/id
 [ -d "$d" ] ||
@@ -41,7 +41,7 @@ do
 	fi
 done
 
-# Try to remove empty directory
-rmdir id 2>/dev/null && fatal F000 "DMI information records not found." ||:
+# Trying to remove an empty directory
+rmdir id &>/dev/null && fatal F000 "DMI information records not found." ||:
 
 exit 0

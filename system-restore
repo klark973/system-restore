@@ -4,9 +4,9 @@
 ###
 ### Copyright (C) 2021-2023, ALT Linux Team
 
-#############################
-### Main execuatable file ###
-#############################
+####################
+### Main program ###
+####################
 
 # Safety first
 set -o errexit
@@ -14,7 +14,7 @@ set -o noglob
 set -o nounset
 set -o errtrace
 
-# The executable name
+# Executable file name
 readonly progname="${0##*/}"
 
 # Full path to this script
