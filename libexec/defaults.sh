@@ -201,6 +201,16 @@ swapsize=AUTO
 # / (root) partition size (optional)
 rootsize=
 
+# Default GUID/GPT partition names
+prepname=PReP
+esp_name=ESP
+bbp_name=GRUB
+bootname=BOOT
+swapname=SWAP
+rootname=ROOT
+var_name=DATA
+homename=HOME
+
 # ESP (EFI System Partition) mount options
 esp_opts="umask=0,quiet,showexec,iocharset=utf8,codepage=866"
 

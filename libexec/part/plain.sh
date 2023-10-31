@@ -2,13 +2,30 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2023, ALT Linux Team
 
-#####################################
-### Disk layouting in deploy mode ###
-#####################################
+########################################################
+### The "plain" disk partitioning in deployment mode ###
+########################################################
 
-# GUID/GPT partitioning
+# An additional multi-drives configuration checker
+#
+multi_drives_config()
+{
+	local msg="Using the '%s' partitioner with"
+	msg="$msg more than one drive is not possible!"
+
+	fatal F000 "$msg" "plain"
+}
+
+# Settings the $target variable in a multi-drives configuration
+#
+multi_drives_setup()
+{
+	multi_drives_config
+}
+
+# Creates a GUID/GPT disk layout
 #
 __prepare_gpt_layout()
 {
@@ -49,23 +66,24 @@ __prepare_gpt_layout()
 		i=$((1 + $i))
 	fi
 
-	# ROOT partition
+	# ROOT partition is required
 	echo ",$rootsize"
 	rootpart="$i"
+	i=$((1 + $i))
 
-	# DATA partition
+	# DATA or HOME partition
 	if [ -n "$rootsize" ]; then
-		i=$((1 + $i))
-		echo ","
-		if [ -s "$backup/var.$ziptype" ]; then
+		if is_file_exists "var.$ziptype"; then
+			echo ","
 			var_part="$i"
 		else
+			echo ",,H"
 			homepart="$i"
 		fi
 	fi
 }
 
-# Simple DOS/MBR layout
+# Creates a simple DOS/MBR disk layout
 #
 __simple_dos_layout()
 {
@@ -99,27 +117,30 @@ __simple_dos_layout()
 		i=$((1 + $i))
 	fi
 
-	# ROOT partition
+	# ROOT partition is required
 	if [ -z "$bootsize" ]; then
 		echo ",$rootsize,L,*"
+		rootpart="$i"
+		i=$((1 + $i))
 	else
 		echo ",$rootsize"
-	fi
-	rootpart="$i"
-
-	# DATA partition
-	if [ -n "$rootsize" ]; then
+		rootpart="$i"
 		i=$((1 + $i))
-		echo ","
-		if [ -s "$backup/var.$ziptype" ]; then
+	fi
+
+	# DATA or HOME partition
+	if [ -n "$rootsize" ]; then
+		if is_file_exists "var.$ziptype"; then
+			echo ","
 			var_part="$i"
 		else
+			echo ","
 			homepart="$i"
 		fi
 	fi
 }
 
-# Complex DOS/MBR layout
+# Creates a complex DOS/MBR disk layout
 #
 __complex_dos_layout()
 {
@@ -154,37 +175,30 @@ __complex_dos_layout()
 	fi
 
 	# Extended partition
-	if [ "$i" = 4 ]; then
-		echo ",,E"
-		i=5
-	fi
+	echo ",,0x05"
 
-	# ROOT partition
+	# ROOT partition is required
 	if [ -z "$bootsize" ]; then
 		echo ",$rootsize,L,*"
+		rootpart=5
 	else
 		echo ",$rootsize"
+		rootpart=5
 	fi
-	rootpart="$i"
 
-	# DATA partition
+	# DATA or HOME partition
 	if [ -n "$rootsize" ]; then
-		if [ "$i" -ge 5 ]; then
-			i=$((1 + $i))
+		if is_file_exists "var.$ziptype"; then
+			echo ","
+			var_part=6
 		else
-			echo ",,E"
-			i=5
-		fi
-		echo ","
-		if [ -s "$backup/var.$ziptype" ]; then
-			var_part="$i"
-		else
-			homepart="$i"
+			echo ","
+			homepart=6
 		fi
 	fi
 }
 
-# DOS/MBR partitioning
+# Creates a DOS/MBR disk layout
 #
 __prepare_dos_layout()
 {
@@ -203,20 +217,94 @@ __prepare_dos_layout()
 		i=$((1 + $i))
 
 	# Selecting MBR layout
-	if [ "$i" -le 3 ]; then
+	if [ "$i" -le 4 ]; then
 		__simple_dos_layout
 	else
 		__complex_dos_layout
 	fi
 }
 
-# Prepare target disk partitioning scheme.
-# It can be overridden in $backup/restore.sh
-# or $backup/$profile/restore.sh.
+# Prepares partition scheme for the target disk,
+# it can be overridden in $backup/restore.sh
+# or $backup/$profile/restore.sh
 #
 make_pt_scheme()
 {
+	preppart=
+	esp_part=
+	bbp_part=
+	bootpart=
+	swappart=
+	rootpart=
+	var_part=
+	homepart=
 	disk_layout="$workdir/disk-layout.tmp"
 	__prepare_${pt_scheme}_layout >"$disk_layout"
+	fdump "$disk_layout"
+}
+
+# Sets paths for all partition device nodes
+#
+define_parts()
+{
+	[ -z "$preppart" ] ||
+		preppart="$(devnode "$preppart")"
+	[ -z "$esp_part" ] ||
+		esp_part="$(devnode "$esp_part")"
+	[ -z "$bbp_part" ] ||
+		bbp_part="$(devnode "$bbp_part")"
+	[ -z "$bootpart" ] ||
+		bootpart="$(devnode "$bootpart")"
+	[ -z "$swappart" ] ||
+		swappart="$(devnode "$swappart")"
+	[ -z "$var_part" ] ||
+		var_part="$(devnode "$var_part")"
+	[ -z "$homepart" ] ||
+		homepart="$(devnode "$homepart")"
+	rootpart="$(devnode "$rootpart")"
+}
+
+# Sets the GUID/GPT PART-LABEL for each created partition
+#
+set_gpt_part_names()
+{
+	local x="${target}p"
+
+	[ "$pt_scheme" = gpt ] ||
+		return 0
+	[ "$ppartsep" = 1 ] ||
+		x="$target"
+	[ -z "$preppart" ] || [ -z "$prepname" ] ||
+		gpt_part_label "$target" "${preppart##$x}" "$prepname"
+	[ -z "$esp_part" ] || [ -z "$esp_name" ] ||
+		gpt_part_label "$target" "${esp_part##$x}" "$esp_name"
+	[ -z "$bbp_part" ] || [ -z "$bbp_name" ] ||
+		gpt_part_label "$target" "${bbp_part##$x}" "$bbp_name"
+	[ -z "$bootpart" ] || [ -z "$bootname" ] ||
+		gpt_part_label "$target" "${bootpart##$x}" "$bootname"
+	[ -z "$swappart" ] || [ -z "$swapname" ] ||
+		gpt_part_label "$target" "${swappart##$x}" "$swapname"
+	[ -z "$var_part" ] || [ -z "$var_name" ] ||
+		gpt_part_label "$target" "${var_part##$x}" "$var_name"
+	[ -z "$homepart" ] || [ -z "$homename" ] ||
+		gpt_part_label "$target" "${homepart##$x}" "$homename"
+	log "All GUID/GPT partitions has been renamed"
+}
+
+# Creates a disk label and applies a new partition scheme
+#
+apply_scheme()
+{
+	loacl msg="Please wait, initializing target device..."
+	local cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
+
+	msg "${L0000-$msg}"
+	wipe_targets "$target"
+	log "Initializing target device: %s..." "$target"
+	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
+	rereadpt "$target"
+	set_gpt_part_names
+	run wipefs -a $(set +f; ls -r ${target}?*) >/dev/null ||:
+	rm -f -- "$disk_layout"
 }
 

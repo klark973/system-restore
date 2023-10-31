@@ -130,7 +130,7 @@ get_disk_info()
 
 # Placeholder: this function must be reimplemented in
 # $utility/part/$partitioner.sh or $backup/$partitioner.sh,
-# it must setup the $target variable in multi-drives configuration
+# it must set the $target variable in a multi-drives configuration
 #
 multi_drives_setup()
 {

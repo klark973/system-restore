@@ -123,13 +123,16 @@ rootpart=
 var_part=
 homepart=
 
-# Partitions UUID's
+# Partition UUIDs
 esp_uuid=
 bootuuid=
 swapuuid=
 rootuuid=
 var_uuid=
 homeuuid=
+
+# Temporary file for sfdisk
+disk_layout=
 
 # Empty (by default): nothing to do, exit only;
 # "reboot": reboot machine after success restore;
