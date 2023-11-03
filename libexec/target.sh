@@ -338,15 +338,15 @@ __search_tgtdev_intl()
 		target="$srcdisks"
 		multi_targets=
 		get_disk_info
-		log "The target device found: %s" "$target: $diskinfo"
+		log "The target device found: %s: %s" "$target" "$diskinfo"
 
 		if [ "$action" = scandisk ]; then
-			msg "%s" "$target: $diskinfo"
+			msg "%s: %s" "$target" "$diskinfo"
 			exit 0
 		fi
 	else
 		multi_targets="$srcdisks"
-		log "Creating multi-drives configuration..."
+		log "Creating a multi-drives configuration..."
 
 		for target in $srcdisks; do
 			log "  - %s" "$target"
@@ -426,7 +426,7 @@ wipe_targets()
 	log "Wiping device(s): %s..." "$devices"
 
 	for dev in $devices; do
-		plist="$(set +f; ls -r "$dev"?*)"
+		plist="$(set +f; ls -r -- "$dev"?* 2>/dev/null ||:)"
 
 		( set +e
 		  set +E

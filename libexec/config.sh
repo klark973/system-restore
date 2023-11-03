@@ -292,9 +292,9 @@ setup_profile()
 	fi
 }
 
-# Default implementation of the additional
-# multi-drives configuration checker, it can be
-# overridden in $backup/config.sh or $backup/$profile/config.sh
+# Default implementation of the additional multi-drives configuration
+# checker, it can be overridden in $utility/part/$partitioner.sh or
+# $backup/$partitioner.sh
 #
 multi_drives_config()
 {
@@ -303,8 +303,8 @@ multi_drives_config()
 }
 
 # Default implementation for getting list of partitioner requirements,
-# it can be overridden in $utility/part/$partitioner.sh
-# or $backup/$partitioner.sh
+# it can be overridden in $utility/part/$partitioner.sh or
+# $backup/$partitioner.sh
 #
 get_partitioner_requires()
 {
@@ -391,7 +391,8 @@ __check_config()
 		done
 
 		[ -n "$list" ] && [ "$num_targets" -gt 1 ] ||
-			fatal F000 "Invalid multi-targets configuration!"
+			fatal F000 "Invalid multi-drives configuration!"
+		multi_targets="${list:1}"
 		multi_drives_config
 	elif [ -n "$num_targets" ]; then
 		is_number "$num_targets" && [ "$num_targets" -ge 1 ] ||
