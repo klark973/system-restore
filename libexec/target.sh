@@ -141,6 +141,17 @@ multi_drives_setup()
 
 # Placeholder: this function must be reimplemented in
 # $utility/part/$partitioner.sh or $backup/$partitioner.sh,
+# it must assign paths for all partition device nodes
+#
+define_parts()
+{
+	local msg="%s MUST BE overridden in partitioner!"
+
+	fatal F000 "$msg" "define_parts()"
+}
+
+# Placeholder: this function must be reimplemented in
+# $utility/part/$partitioner.sh or $backup/$partitioner.sh,
 # it creates a disk label and applies a new partition scheme
 #
 apply_scheme()
@@ -152,13 +163,12 @@ apply_scheme()
 
 # Placeholder: this function must be reimplemented in
 # $utility/part/$partitioner.sh or $backup/$partitioner.sh,
-# it must assign paths for all partition device nodes
+# it deinitializes all disk subsystems after unmounting
+# partitions and before finalizing the primary action
 #
-define_parts()
+deinit_disks()
 {
-	local msg="%s MUST BE overridden in partitioner!"
-
-	fatal F000 "$msg" "define_parts()"
+	: # Do nothing by default
 }
 
 # A wrapper function which looks for a target device if one is not specified

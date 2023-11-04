@@ -63,7 +63,7 @@ msg()
 #
 log()
 {
-	: # Nothing by default
+	: # Do nothing by default
 }
 
 # Base implementation, it will be overridden in logger.sh

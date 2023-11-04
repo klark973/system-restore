@@ -9,7 +9,7 @@
 #
 check_prereq_platform()
 {
-	: # Nothing by default
+	: # Do nothing by default
 }
 
 # Special hook for platform-specific function,
@@ -17,7 +17,7 @@ check_prereq_platform()
 #
 setup_privates_platform()
 {
-	: # Nothing by default
+	: # Do nothing by default
 }
 
 # It called before parsing the configuration
@@ -302,22 +302,13 @@ multi_drives_config()
 		fatal F000 "Use deploy mode with the multi-drives configuration"
 }
 
-# Default implementation for getting list of partitioner requirements,
-# it can be overridden in $utility/part/$partitioner.sh or
-# $backup/$partitioner.sh
-#
-get_partitioner_requires()
-{
-	: # Nothing by default
-}
-
 # Here is a place to safely setup user-defined hooks once
 # the configuration is complete, it can be overridden in
 # $backup/config.sh or $backup/$profile/config.sh
 #
 post_config_setup()
 {
-	: # Nothing by default
+	: # Do nothing by default
 }
 
 # Default implementation of the configuration checker
@@ -424,6 +415,10 @@ __check_config()
 
 	# Checking the partitioner and including appropriate support
 	if [ -n "$use_target" ]; then
+		eval "${partitioner}_requires() {
+			: Do nothing by default
+		}"
+
 		if [ -s "$utility/part/$partitioner.sh" ]; then
 			. "$utility/part/$partitioner.sh"
 		elif [ "$partitioner" != none ]; then
@@ -431,7 +426,8 @@ __check_config()
 				fatal F000 "The partitioner '%s' not found!" "$partitioner"
 			user_config "$partitioner.sh"
 		fi
-		i="$(get_partitioner_requires)"
+
+		i="$(${partitioner}_requires)"
 		[ -z "$i" ] || required_tools="$required_tools $i"
 	fi
 
