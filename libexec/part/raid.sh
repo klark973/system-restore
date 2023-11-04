@@ -21,7 +21,10 @@ raid_requires()
 	local r
 
 	r="$(plain_requires)"
-	echo "${r:+$r }mdadm tput"
+	r="${r:+$r }mdadm"
+	[ -n "$no_md_sync" ] ||
+		r="$r tput"
+	echo "$r"
 }
 
 # An additional multi-drives configuration checker
@@ -60,7 +63,7 @@ apply_scheme()
 		log "Creating the IMSM container: %s..." "$imsm_container"
 		run mdadm --create --verbose --level=container --metadata=imsm	\
 			  --homehost=$computer --name=$IMSM_CONTAINER_NAME	\
-			  -n $num_targets "$imsm_container" $multi_targets
+			  --raid-devices=$num_targets "$imsm_container" $multi_targets
 		run sync; run udevadm settle -t5 >/dev/null ||:
 		log "Creating the RAID array: %s..." "$target"
 		run mdadm --create --verbose --level=raid1			\
@@ -76,6 +79,46 @@ apply_scheme()
 	rereadpt "$target"
 	run wipefs -a $(set +f; ls -r -- "$target"?*) >/dev/null ||:
 	rm -f -- "$disk_layout"
+}
+
+# Partitioner hook that is called after rootfs unpacking
+#
+raid_post_unpack()
+{
+	local fname="$destdir/etc/initrd.mk"
+
+	# Editing /etc/initrd.mk
+	if [ ! -f "$fname" ]; then
+		echo "FEATURES += mdadm" >"$fname"
+	else
+		grep -sw FEATURES "$fname" |grep -qsw mdadm ||
+			echo "FEATURES += mdadm" >>"$fname"
+	fi
+
+	# Creating /etc/mdadm.conf
+	fname="$destdir/etc/mdadm.conf"
+	if [ ! -f "$fname" ]; then
+		if [ -s "$fname.sample" ]; then
+			cp -Lf -- "$fname.sample" "$fname"
+			grep -qsE '^DEVICE ' "$fname" ||
+				echo "DEVICE partitions" >>"$fname"
+		else
+			cat >"$fname" <<-MDADMCONF
+			# /etc/mdadm.conf  --  mdadm configuration
+			#
+			MAILADDR root
+			PROGRAM /sbin/mdadm-syslog-events
+			DEVICE partitions
+			#
+			## EOF ##
+			MDADMCONF
+		fi
+	fi
+
+	# Editing /etc/mdadm.conf
+	run mdadm --detail --scan --verbose |
+		awk '/ARRAY/ {print}' >>"$fname"
+	fdump "$fname"
 }
 
 # Returns TRUE if one of the MD-arrays is not synchronized
@@ -101,10 +144,10 @@ md_not_synced() {
 	return 1
 }
 
-# Deinitializes all disk subsystems after unmounting
-# partitions and before finalizing the primary action
+# Synchronizes MD-arrays in a console mode after partitions
+# are unmounted and before finalizing the primary action
 #
-deinit_disks()
+__sync_arrays_tty()
 {
 	local msg="${L0000-Syncing MD-RAID(s), press ENTER to skip...}"
 	local tmpstat="$workdir/mdstat.tmp"
@@ -167,11 +210,20 @@ deinit_disks()
 	# Move the cursor up twice and clear to the end of terminal
 	( echo cuu1; echo cuu1; echo ed ) |tput -S
 
-	# Final steps
+	# Garbage collection
+	rm -f -- "$tmpstat"
+}
+
+# Deinitializes all disk subsystems after partitions
+# are unmounted and before finalizing the primary action
+#
+deinit_disks()
+{
+	[ -n "$no_md_sync" ] && cat /proc/mdstat ||
+		__sync_arrays_tty
 	run mdadm --stop "$target"
 	[ -z "$imsm_container" ] ||
 		run mdadm --stop "$imsm_container"
 	run mdadm --stop --scan >/dev/null ||:
-	rm -f -- "$tmpstat"
 }
 

@@ -36,7 +36,7 @@ computer=host
 # ip3: add three last (2'nd...4'th) parts of the IP-address.
 # hw6: add six hexadecimal digits from Ethernet MAC-address.
 # rnd: generate random part and add it to the base name.
-# hook: use user-defined hostnaming function.
+# <hook>: use user-defined hostnaming function.
 # Default value is "hw6" for deploy or "copy" for restore.
 hostnaming=copy
 
@@ -45,7 +45,7 @@ hostnaming=copy
 # timeshift: one-drive timeshift-compatible layout.
 # lvm: one-drive LVM default layout.
 # raid: multi-drives default layout.
-# hook: use user-defined partitioner.
+# <hook>: use user-defined partitioner.
 # Default value for deploy mode is "plain".
 partitioner=plain
 
@@ -76,6 +76,10 @@ target_max_capacity=
 # If the field is non empty, looks for target devices connected
 # only to mdadm FakeRAID (IMSM), such as Intel VROC/iRST/RSTe.
 imsm_container=
+
+# By default this field is empty. Otherwise we won't wait for
+# the RAID(s) to sync before finalizing the primary action.
+no_md_sync=
 
 # 1: enable deploy or restore to removable devices
 removable=

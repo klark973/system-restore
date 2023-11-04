@@ -418,6 +418,9 @@ __check_config()
 		eval "${partitioner}_requires() {
 			: Do nothing by default
 		}"
+		eval "${partitioner}_post_unpack() {
+			: Do nothing by default
+		}"
 
 		if [ -s "$utility/part/$partitioner.sh" ]; then
 			. "$utility/part/$partitioner.sh"
