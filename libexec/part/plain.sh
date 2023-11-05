@@ -264,20 +264,3 @@ set_gpt_part_names()
 	log "All GUID/GPT partitions has been renamed"
 }
 
-# Creates a disk label and applies a new partition scheme
-#
-apply_scheme()
-{
-	local cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
-
-	msg "${L0000-Please wait, initializing the target device(s)...}"
-	wipe_targets
-
-	log "Initializing the target device: %s..." "$target"
-	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
-	rereadpt "$target"
-	set_gpt_part_names
-	run wipefs -a $(set +f; ls -r -- "$target"?*) >/dev/null ||:
-	rm -f -- "$disk_layout"
-}
-

@@ -175,17 +175,9 @@ set_gpt_part_names()
 #
 apply_scheme()
 {
-	local vs cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
+	local vs
 
-	msg "${L0000-Please wait, initializing the target device(s)...}"
-	wipe_targets
-
-	log "Initializing the target device: %s..." "$target"
-	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
-	rereadpt "$target"
-	set_gpt_part_names
-	run wipefs -a $(set +f; ls -r -- "$target"?*) >/dev/null ||:
-	rm -f -- "$disk_layout"
+	apply_scheme_default
 
 	# Supress warnings about open file descriptors
 	export LVM_SUPPRESS_FD_WARNINGS=1

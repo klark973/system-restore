@@ -543,10 +543,10 @@ wipe_targets()
 		( set +e
 		  set +E
 		  [ -z "$plist" ] ||
-			wipefs -a $plist
+			wipefs -a -- $plist
 		  mdadm --zero-superblock "$dev"
 		  dd if=/dev/zero bs=1M count=2 of="$dev"
-		  wipefs -a "$dev"
+		  wipefs -a -- "$dev"
 		  sync "$dev"
 		  udevadm trigger -q "$dev"
 		) &>/dev/null ||:
@@ -644,5 +644,32 @@ gpt_part_label()
 	else
 		run $cmd -- "$device" "$partno" ||:
 	fi
+}
+
+# Creates a disk label and applies a new partition scheme,
+# this is a default implementation
+#
+apply_scheme_default()
+{
+	local cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
+
+	msg "${L0000-Please wait, initializing the target device(s)...}"
+	wipe_targets
+
+	log "Initializing the target device: %s..." "$target"
+	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
+	rereadpt "$target"
+	set_gpt_part_names
+	run wipefs -a -- $(set +f; ls -r -- "$target"?*) >/dev/null ||:
+	run rm -f -- "$disk_layout"
+}
+
+# Creates a disk label and applies a new partition scheme,
+# it can be reimplemented in $utility/part/$partitioner.sh
+# or $backup/$partitioner.sh
+#
+apply_scheme()
+{
+	apply_scheme_default
 }
 

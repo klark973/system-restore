@@ -52,7 +52,7 @@ multi_drives_setup()
 	fi
 }
 
-# Prepares partition scheme on the target array
+# Prepares partition scheme in the target array
 #
 raid_make_scheme()
 {
@@ -92,8 +92,8 @@ apply_scheme()
 	log "Initializing the RAID array: %s..." "$target"
 	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
 	rereadpt "$target"
-	run wipefs -a $(set +f; ls -r -- "$target"?*) >/dev/null ||:
-	rm -f -- "$disk_layout"
+	run wipefs -a -- $(set +f; ls -r -- "$target"?*) >/dev/null ||:
+	run rm -f -- "$disk_layout"
 }
 
 # Partitioner hook that is called after rootfs unpacking
@@ -227,7 +227,7 @@ __sync_arrays_tty()
 	( echo cuu1; echo cuu1; echo ed ) |tput -S
 
 	# Garbage collection
-	rm -f -- "$tmpstat"
+	run rm -f -- "$tmpstat"
 }
 
 # Deinitializes all disk subsystems after partitions
@@ -240,6 +240,7 @@ deinit_disks()
 	else
 		__sync_arrays_tty
 	fi
+
 	run mdadm --stop "$target"
 	[ -z "$imsm_container" ] ||
 		run mdadm --stop "$imsm_container"
