@@ -6,7 +6,7 @@
 
 ########################################################
 ### Internal variables, don't use it in restore.ini  ###
-### inside the backup and/or sub-profile!            ###
+### inside the backup and/or profile sub-directory!  ###
 ###                                                  ###
 ### You can still set default values for some        ###
 ### privates only in /etc/system-backup/restore.ini. ###
@@ -15,7 +15,7 @@
 # Specified action name (required)
 action=
 
-# Auto-detected or specified sub-profile name (optional)
+# Auto-detected or specified profile name (optional)
 profile=
 
 # Auto-detected target disk information
@@ -45,8 +45,8 @@ remote_pass="${remote_pass-}"
 # (by default), 1: show diagnostics before primary action
 show_diag="${show_diag-}"
 
-# 1 (by default): enable to use user-defined hooks and
-# scripts supplied with the backup and/or sub-profile
+# 1 (by default): enable to use user-defined hooks
+# and scripts supplied with the backup and/or profile
 use_hooks="${use_hooks-1}"
 
 # 1 (by default): show dialogs, empty: use stdout/stderr only

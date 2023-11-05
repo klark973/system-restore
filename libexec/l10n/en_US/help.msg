@@ -18,7 +18,7 @@ Options:
   -R, --reboot      Reboot machine after success restore.
   -P, --poweroff    Turn power OFF after success restore.
   -b, --backup=     Specify alternate path to the backup.
-  -p, --profile=    Specify name of the sub-profile to use.
+  -p, --profile=    Specify profile name (sub-directory) to use.
   -r, --removable   Enable to use removable devices as targets.
   -x, --exclude=    Add specified block special device or mount point
                     to the write-protected devices list, it excluded
@@ -26,7 +26,7 @@ Options:
                     repeated several times.
       --no-log      Turn OFF logging to file.
       --no-hooks    Disable to use user-defined scripts supplied with
-                    the backup and/or sub-profiles. This may be useful
+                    the backup and/or profiles. This may be useful
                     for debug failures and by security reasons.
       --no-dialogs  Disable dialogs, output to console only.
       --show-diag   Show diagnostics before start the recovery process.
@@ -44,8 +44,8 @@ Examples:
 
   @PROG@ -d -P -b /mnt/backup -p grav-2021 -- /dev/nvme0n1
 
-  The backup in /mnt/backup directory will be checked first, also will
-  be checked and set to directly use sub-profile "grav-2021", device
+  The backup in /mnt/backup directory will be checked first, also
+  will be checked and set to directly use profile "grav-2021", device
   /dev/nvme0n1 will be cleaned, repartitioned, restored from the backup
   in "deploy mode", host private data will be regenerated for installation
   personification, and after success recovery the computer power will be

@@ -5,7 +5,7 @@
 ### Copyright (C) 2021-2023 ALT Linux Team
 
 # Called before including restore.ini files
-# supplied with the backup and/or sub-profile,
+# supplied with the backup and/or profile,
 # it changes platform-specific defaults and
 # checks platform-specific requirements
 #

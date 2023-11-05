@@ -5,7 +5,7 @@
 ### Copyright (C) 2021-2023, ALT Linux Team
 
 #############################################################
-### Creates 'id' directory for sub-profile auto-detection ###
+### Creates 'id' sub-directory for profile auto-detection ###
 #############################################################
 
 d=/sys/class/dmi/id
