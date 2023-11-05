@@ -219,6 +219,26 @@ multi_drives_setup()
 	[ -z "$target" ] || check_target_size
 }
 
+# Prepares partition scheme for the target disk,
+# it can be overridden in $backup/restore.sh
+# or $backup/$profile/restore.sh
+#
+make_pt_scheme()
+{
+	preppart=
+	esp_part=
+	bbp_part=
+	bootpart=
+	swappart=
+	rootpart=
+	var_part=
+	homepart=
+
+	disk_layout="$workdir/disk-layout.tmp"
+	${partitioner}_make_scheme >"$disk_layout"
+	fdump "$disk_layout"
+}
+
 # Placeholder: this function must be reimplemented in
 # $utility/part/$partitioner.sh or $backup/$partitioner.sh,
 # it must assign paths for all partition device nodes

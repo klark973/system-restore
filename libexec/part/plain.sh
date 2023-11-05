@@ -207,23 +207,11 @@ __prepare_dos_layout()
 	fi
 }
 
-# Prepares partition scheme for the target disk,
-# it can be overridden in $backup/restore.sh
-# or $backup/$profile/restore.sh
+# Prepares partition scheme for the target disk
 #
-make_pt_scheme()
+plain_make_scheme()
 {
-	preppart=
-	esp_part=
-	bbp_part=
-	bootpart=
-	swappart=
-	rootpart=
-	var_part=
-	homepart=
-	disk_layout="$workdir/disk-layout.tmp"
-	__prepare_${pt_scheme}_layout >"$disk_layout"
-	fdump "$disk_layout"
+	__prepare_${pt_scheme}_layout
 }
 
 # Sets paths for all partition device nodes
@@ -267,6 +255,8 @@ set_gpt_part_names()
 		gpt_part_label "$target" "${bootpart##$x}" "$bootname"
 	[ -z "$swappart" ] || [ -z "$swapname" ] ||
 		gpt_part_label "$target" "${swappart##$x}" "$swapname"
+	[ -z "$rootpart" ] || [ -z "$rootname" ] ||
+		gpt_part_label "$target" "${rootpart##$x}" "$rootname"
 	[ -z "$var_part" ] || [ -z "$var_name" ] ||
 		gpt_part_label "$target" "${var_part##$x}" "$var_name"
 	[ -z "$homepart" ] || [ -z "$homename" ] ||

@@ -43,7 +43,7 @@ hostnaming=copy
 # How to disk(s) partitioning? Available options are:
 # plain: one-drive DOS/MBR or GUID/GPT default layout.
 # timeshift: one-drive timeshift-compatible layout.
-# lvm: one-drive LVM default layout.
+# lvm2: one-drive LVM2 default layout.
 # raid: multi-drives default layout.
 # <hook>: use user-defined partitioner.
 # Default value for deploy mode is "plain".

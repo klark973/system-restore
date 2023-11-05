@@ -52,6 +52,13 @@ multi_drives_setup()
 	fi
 }
 
+# Prepares partition scheme on the target array
+#
+raid_make_scheme()
+{
+	plain_make_scheme
+}
+
 # Creates a disk label and applies a new partition scheme
 #
 apply_scheme()
