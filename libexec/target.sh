@@ -128,15 +128,95 @@ get_disk_info()
 	fi
 }
 
-# Placeholder: this function must be reimplemented in
-# $utility/part/$partitioner.sh or $backup/$partitioner.sh,
-# it must set the $target variable in a multi-drives configuration
+# Returns the minimum required disk size
+#
+requested_device_size()
+{
+	local v s=0
+
+	[ -z "$prepsize" ] && v="" ||
+		v="$(human2size "$prepsize")"
+	[ -z "$v" ] ||
+		s=$(( $s + $v ))
+	[ -z "$esp_size" ] && v="" ||
+		v="$(human2size "$esp_size")"
+	[ -z "$v" ] ||
+		s=$(( $s + $v ))
+	[ -z "$bbp_size" ] && v="" ||
+		v="$(human2size "$bbp_size")"
+	[ -z "$v" ] ||
+		s=$(( $s + $v ))
+	[ -z "$bootsize" ] && v="" ||
+		v="$(human2size "$bootsize")"
+	[ -z "$v" ] ||
+		s=$(( $s + $v ))
+	[ -z "$swapsize" ] && v="" ||
+		v="$(human2size "$swapsize")"
+	[ -z "$v" ] ||
+		s=$(( $s + $v ))
+	[ -z "$rootsize" ] && v="" ||
+		v="$(human2size "$rootsize")"
+	[ -z "$v" ] ||
+		s=$(( $s + $v ))
+	v="$(human2size 1G)"
+	s=$(( $s + $v ))
+	printf "%s" "$s"
+}
+
+# Selects only one device with minimum capacity
+#
+__select_smallest_drive()
+{
+	local dev curr min=0
+
+	for dev in $multi_targets; do
+		curr="$(get_disk_size "$dev")"
+		if [ -z "$target" ] || [ "$min" -gt "$curr" ]; then
+			target="$dev"
+			min="$curr"
+		fi
+	done
+}
+
+# Selects only one device with maximum capacity
+#
+__select_biggest_drive()
+{
+	local dev curr max=0
+
+	for dev in $multi_targets; do
+		curr="$(get_disk_size "$dev")"
+		if [ -z "$target" ] || [ "$max" -lt "$curr" ]; then
+			target="$dev"
+			max="$curr"
+		fi
+	done
+}
+
+# Checks the target disk size
+#
+check_target_size()
+{
+	local r s
+
+	r="$(requested_device_size)"
+	s="$(get_disk_size "$target")"
+	[ "$r" -le "$s" ] ||
+		fatal F000 "Not enough space on the target device!"
+	r="$(size2human "$r")"
+	s="$(size2human "$s")"
+	log "Requested space: %s, target size: %s" "$r" "$s"
+}
+
+# Sets the $target variable in a multi-drives configuration.
+# The default implementation just selects only one device
+# with the maximum capacity. It can be reimplemented in
+# $utility/part/$partitioner.sh or $backup/$partitioner.sh
 #
 multi_drives_setup()
 {
-	local msg="%s MUST BE overridden in partitioner!"
-
-	fatal F000 "$msg" "multi_drives_setup()"
+	__select_biggest_drive
+	[ -z "$target" ] || check_target_size
 }
 
 # Placeholder: this function must be reimplemented in
@@ -246,6 +326,7 @@ __search_tgtdev_intl()
 		[ -z "$target_model_pattern" ] || in_array "$target" $models ||
 			fatal F000 "Target device (%s) and pattern mismatch!" "$target"
 		get_disk_info
+		check_target_size
 		log "Specified target device: $target: $diskinfo"
 		return 0
 	fi
@@ -348,6 +429,7 @@ __search_tgtdev_intl()
 		target="$srcdisks"
 		multi_targets=
 		get_disk_info
+		check_target_size
 		log "The target device found: %s: %s" "$target" "$diskinfo"
 
 		if [ "$action" = scandisk ]; then

@@ -356,6 +356,8 @@ __check_config()
 			pt_scheme=dos
 		[ -z "$force_gpt_label" ] ||
 			pt_scheme=gpt
+		[ "$partitioner" = raid ] ||
+			imsm_container=
 		unique_clone=1
 	fi
 
@@ -405,8 +407,6 @@ __check_config()
 		required_tools="$required_tools logger"
 	[ -z "$use_dialog" ] ||
 		required_tools="$required_tools dialog"
-	[ "$partitioner" = raid ] ||
-		imsm_container=
 	i="$(get_proto_requires)"
 	[ -z "$i" ] ||
 		required_tools="$required_tools $i"
@@ -425,8 +425,9 @@ __check_config()
 		if [ -s "$utility/part/$partitioner.sh" ]; then
 			. "$utility/part/$partitioner.sh"
 		elif [ "$partitioner" != none ]; then
+			i="The partitioner '%s' not found!"
 			is_file_exist "$partitioner.sh" ||
-				fatal F000 "The partitioner '%s' not found!" "$partitioner"
+				fatal F000 "$i" "$partitioner"
 			user_config "$partitioner.sh"
 		fi
 

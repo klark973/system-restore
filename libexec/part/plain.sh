@@ -8,23 +8,6 @@
 ### The "plain" disk partitioning in deployment mode ###
 ########################################################
 
-# An additional multi-drives configuration checker
-#
-multi_drives_config()
-{
-	local msg="Using the '%s' partitioner with"
-	msg="$msg more than one drive is not possible!"
-
-	fatal F000 "$msg" "plain"
-}
-
-# Settings the $target variable in a multi-drives configuration
-#
-multi_drives_setup()
-{
-	multi_drives_config
-}
-
 # Creates a GUID/GPT disk layout
 #
 __prepare_gpt_layout()
@@ -297,8 +280,9 @@ apply_scheme()
 {
 	local cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
 
-	msg "${L0000-Please wait, initializing the target device...}"
-	wipe_targets "$target"
+	msg "${L0000-Please wait, initializing the target device(s)...}"
+	wipe_targets
+
 	log "Initializing the target device: %s..." "$target"
 	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
 	rereadpt "$target"

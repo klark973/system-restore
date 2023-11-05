@@ -24,7 +24,7 @@ raid_requires()
 	r="${r:+$r }mdadm"
 	[ -n "$no_md_sync" ] ||
 		r="$r tput"
-	echo "$r"
+	printf "%s" "$r"
 }
 
 # An additional multi-drives configuration checker
@@ -35,13 +35,21 @@ multi_drives_config()
 		imsm_container=/dev/md0
 }
 
-# Settings the $target variable in a multi-drives configuration
+# Sets the $target variable in a multi-drives configuration
 #
 multi_drives_setup()
 {
-	target=/dev/md0
-	[ "$imsm_container" != "$target" ] ||
-		target=/dev/md1
+	__select_smallest_drive
+
+	if [ -n "$target" ]; then
+		check_target_size
+
+		if [ "$imsm_container" = "$target" ]; then
+			target=/dev/md1
+		else
+			target=/dev/md0
+		fi
+	fi
 }
 
 # Creates a disk label and applies a new partition scheme
@@ -50,7 +58,7 @@ apply_scheme()
 {
 	local cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
 
-	msg "${L0000-Please wait, initializing target devices...}"
+	msg "${L0000-Please wait, initializing the target device(s)...}"
 	wipe_targets $multi_targets
 
 	if [ -z "$imsm_container" ]; then
@@ -85,9 +93,10 @@ apply_scheme()
 #
 raid_post_unpack()
 {
-	local fname="$destdir/etc/initrd.mk"
+	local fname
 
 	# Editing /etc/initrd.mk
+	fname="$destdir/etc/initrd.mk"
 	if [ ! -f "$fname" ]; then
 		echo "FEATURES += mdadm" >"$fname"
 	else
@@ -100,8 +109,6 @@ raid_post_unpack()
 	if [ ! -f "$fname" ]; then
 		if [ -s "$fname.sample" ]; then
 			cp -Lf -- "$fname.sample" "$fname"
-			grep -qsE '^DEVICE ' "$fname" ||
-				echo "DEVICE partitions" >>"$fname"
 		else
 			cat >"$fname" <<-MDADMCONF
 			# /etc/mdadm.conf  --  mdadm configuration
@@ -116,6 +123,8 @@ raid_post_unpack()
 	fi
 
 	# Editing /etc/mdadm.conf
+	grep -qsE "^DEVICE " "$fname" ||
+		echo "DEVICE partitions" >>"$fname"
 	run mdadm --detail --scan --verbose |
 		awk '/ARRAY/ {print}' >>"$fname"
 	fdump "$fname"
@@ -219,8 +228,11 @@ __sync_arrays_tty()
 #
 deinit_disks()
 {
-	[ -n "$no_md_sync" ] && cat /proc/mdstat ||
+	if [ -n "$no_md_sync" ]; then
+		cat /proc/mdstat
+	else
 		__sync_arrays_tty
+	fi
 	run mdadm --stop "$target"
 	[ -z "$imsm_container" ] ||
 		run mdadm --stop "$imsm_container"
