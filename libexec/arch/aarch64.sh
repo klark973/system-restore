@@ -22,7 +22,7 @@ check_prereq_platform()
 # modifies platform-specific settings and performs
 # a final check after the configuration is complete
 #
-setup_privates_platform()
+platform_setup_internals()
 {
 	[ -n "$uefiboot" ] && [ -n "$esp_size" ] ||
 		fatal F000 "UEFI boot and ESP are required for %s!" "$platform"

@@ -25,7 +25,7 @@ check_prereq_platform()
 # modifies platform-specific settings and performs
 # a final check after the configuration is complete
 #
-setup_privates_platform()
+platform_setup_internals()
 {
 	# Resetting BIOS Boot partition
 	if [ "$pt_scheme" = dos ]; then

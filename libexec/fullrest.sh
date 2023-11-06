@@ -10,7 +10,7 @@
 
 do_fullrest_action()
 {
-	setup_privates
+	setup_internals
 	use_pt_scheme
 	[ -z "$showdiag" ] ||
 		. "$utility"/diaginfo.sh

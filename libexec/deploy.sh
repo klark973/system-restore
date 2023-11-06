@@ -10,7 +10,7 @@
 
 do_deploy_action()
 {
-	setup_privates
+	setup_internals
 	make_pt_scheme
 	[ -z "$showdiag" ] ||
 		. "$utility"/diaginfo.sh

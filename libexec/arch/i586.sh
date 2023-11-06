@@ -19,7 +19,7 @@ check_prereq_platform()
 # modifies platform-specific settings and performs
 # a final check after the configuration is complete
 #
-setup_privates_platform()
+platform_setup_internals()
 {
 	[ -z "$uefiboot" ] && [ -z "$esp_size" ] ||
 		fatal F000 "UEFI boot is not supported on %s!" "$platform"

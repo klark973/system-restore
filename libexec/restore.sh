@@ -35,7 +35,7 @@ make_unique_hostname()
 	log "Unique computer name is '%s'" "$computer"
 }
 
-setup_privates()
+setup_internals()
 {
 	local dsz=0
 
@@ -57,7 +57,7 @@ setup_privates()
 
 	[ -z "$unique_clone" ] ||
 		make_unique_hostname
-	setup_privates_platform
+	platform_setup_internals
 }
 
 # It can be overridden in $backup/restore.sh

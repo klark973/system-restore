@@ -10,7 +10,7 @@
 
 do_sysrest_action()
 {
-	setup_privates
+	setup_internals
 	check_pt_scheme
 	[ -z "$showdiag" ] ||
 		. "$utility"/diaginfo.sh

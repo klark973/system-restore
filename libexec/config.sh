@@ -15,7 +15,7 @@ check_prereq_platform()
 # Special hook for platform-specific function,
 # it can be overridden in arch/$platform.sh
 #
-setup_privates_platform()
+platform_setup_internals()
 {
 	: # Do nothing by default
 }

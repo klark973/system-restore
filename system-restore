@@ -27,7 +27,7 @@ readonly utility="${scriptname%/*}/libexec"
 . "$utility"/defaults.sh
 [ ! -s "/etc/$progname"/restore.ini ] ||
 	. "/etc/$progname"/restore.ini
-. "$utility"/privates.sh
+. "$utility"/internal.sh
 . "$utility"/common.sh
 . "$utility"/parser.sh
 . "$utility"/config.sh
