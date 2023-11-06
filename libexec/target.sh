@@ -231,8 +231,7 @@ make_pt_scheme()
 	bootpart=
 	swappart=
 	rootpart=
-	var_part=
-	homepart=
+	datapart=
 
 	disk_layout="$workdir/disk-layout.tmp"
 	${partitioner}_make_scheme >"$disk_layout"

@@ -32,7 +32,7 @@ workdir=
 # Auto-detected native language code, such as 'en_US'
 lang=
 
-# Backup directory on the local filesystem
+# Backup directory on local filesystem
 # (current working directory by default)
 backup="${backup-$(realpath .)}"
 
@@ -107,14 +107,13 @@ ziptype=
 # Auto-detected names of the partition devices
 # (only $rootpart is strictly required by default)
 #
-# $preppart required for install grub-ieee1275 on IBM Power
-# $bbp_part required for install grub-pc to GUID/GPT disk label
-# $esp_part need for /boot/efi (required for UEFI-boot mode)
-# $bootpart need for /boot (required only on e2k* platforms)
-# $swappart need for SWAP
-# $rootpart need for /
-# $var_part need for /var
-# $homepart need for /home
+# $preppart is required for install grub-ieee1275 on IBM Power
+# $bbp_part is required for install grub-pc to GUID/GPT disk label
+# $esp_part is needed for /boot/efi (is required for UEFI-boot mode)
+# $bootpart is needed for /boot (is required only on e2k* platforms)
+# $swappart is needed for SWAP
+# $rootpart is needed for / (system rootfs)
+# $datapart is needed for /home, /var and so on
 #
 preppart=
 esp_part=
@@ -122,16 +121,14 @@ bbp_part=
 bootpart=
 swappart=
 rootpart=
-var_part=
-homepart=
+datapart=
 
 # Partition UUIDs
 esp_uuid=
 bootuuid=
 swapuuid=
 rootuuid=
-var_uuid=
-homeuuid=
+datauuid=
 
 # Temporary file for sfdisk
 disk_layout=

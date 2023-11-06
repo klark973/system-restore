@@ -184,12 +184,9 @@ umount_parts()
 	[ -z "$bootpart" ] ||
 		run umount -- "$destdir"/boot 2>/dev/null ||
 			run umount -fl -- "$destdir"/boot
-	[ -z "$homepart" ] ||
-		run umount -- "$destdir"/home 2>/dev/null ||
-			run umount -fl -- "$destdir"/home
-	[ -z "$var_part" ] ||
-		run umount -- "$destdir"/var 2>/dev/null ||
-			run umount -fl -- "$destdir"/var
+	[ -z "$datapart" ] ||
+		run umount -- "${destdir}${datapart_mp}" 2>/dev/null ||
+			run umount -fl -- "${destdir}${datapart_mp}"
 	run umount -- "$destdir" 2>/dev/null ||
 		run umount -fl -- "$destdir" ||:
 	run rmdir  -- "$destdir" 2>/dev/null ||:

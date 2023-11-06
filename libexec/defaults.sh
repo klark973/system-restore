@@ -93,6 +93,9 @@ validate=1
 # it can be changed anyway
 keep_uuids=
 
+# The data partition mount point, if used
+datapart_mp=/home
+
 # 1: clear NVRAM before store new record (only if uefiboot=1)
 clear_nvram=
 
@@ -212,8 +215,7 @@ bbp_name=GRUB
 bootname=BOOT
 swapname=SWAP
 rootname=ROOT
-var_name=DATA
-homename=HOME
+dataname=DATA
 
 # ESP (EFI System Partition) mount options
 esp_opts="umask=0,quiet,showexec,iocharset=utf8,codepage=866"

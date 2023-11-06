@@ -13,7 +13,6 @@ readonly LVM2_SYSGROUP="${LVM2_SYSGROUP-alt}"
 readonly LVM2_SWAPNAME="${LVM2_SWAPNAME-swap}"
 readonly LVM2_ROOTNAME="${LVM2_ROOTNAME-root}"
 readonly LVM2_DATANAME="${LVM2_DATANAME-data}"
-readonly LVM2_HOMENAME="${LVM2_HOMENAME-home}"
 readonly LVM2_PARTGUID="E6D6D379-F507-44C2-A23C-238F2A3DF928"
 
 # Returns a list of partitioner requirements
@@ -104,7 +103,8 @@ __prepare_dos_layout()
 	fi
 
 	# LVM2 partition is required
-	echo ",,0x8E"
+	[ -n "$bootsize" ] && echo ",,0x8E" ||
+		echo ",,0x8E,*"
 	lvm2part="$i"
 }
 
@@ -114,15 +114,9 @@ lvm2_make_scheme()
 {
 	lvm2part=
 	__prepare_${pt_scheme}_layout
-
-	if is_file_exists "var.$ziptype"; then
-		var_part="${rootsize:+1}"
-	else
-		homepart="${rootsize:+1}"
-	fi
-
 	rootpart=1
 	swappart="${swapsize:+1}"
+	datapart="${rootsize:+1}"
 }
 
 # Sets paths for all partition device nodes
@@ -141,10 +135,8 @@ define_parts()
 		lvm2part="$(devnode "$lvm2part")"
 	[ -z "$swappart" ] ||
 		swappart="/dev/mapper/$LVM2_SYSGROUP-$LVM2_SWAPNAME"
-	[ -z "$var_part" ] ||
-		var_part="/dev/mapper/$LVM2_SYSGROUP-$LVM2_DATANAME"
-	[ -z "$homepart" ] ||
-		homepart="/dev/mapper/$LVM2_SYSGROUP-$LVM2_HOMENAME"
+	[ -z "$datapart" ] ||
+		datapart="/dev/mapper/$LVM2_SYSGROUP-$LVM2_DATANAME"
 	rootpart="/dev/mapper/$LVM2_SYSGROUP-$LVM2_ROOTNAME"
 }
 
@@ -198,14 +190,8 @@ apply_scheme()
 		vs="$(size2human "$rootsize")"
 		run lvcreate -L "$vs" -n "$LVM2_ROOTNAME" -- "$LVM2_SYSGROUP"
 		run wipefs -a -- "$rootpart" >/dev/null ||:
-
-		if [ -n "$var_part" ]; then
-			run lvcreate -l100%FREE -n "$LVM2_DATANAME" -- "$LVM2_SYSGROUP"
-			run wipefs -a -- "$var_part" >/dev/null ||:
-		elif [ -n "$homepart" ]; then
-			run lvcreate -l100%FREE -n "$LVM2_HOMENAME" -- "$LVM2_SYSGROUP"
-			run wipefs -a -- "$homepart" >/dev/null ||:
-		fi
+		run lvcreate -l100%FREE -n "$LVM2_DATANAME" -- "$LVM2_SYSGROUP"
+		run wipefs -a -- "$datapart" >/dev/null ||:
 	fi
 }
 

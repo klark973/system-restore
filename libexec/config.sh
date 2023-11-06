@@ -20,7 +20,7 @@ platform_setup_internals()
 	: # Do nothing by default
 }
 
-# It called before parsing the configuration
+# It is called before parsing the configuration
 #
 check_prerequires()
 {
@@ -82,7 +82,7 @@ check_volume_layouts()
 	fi
 }
 
-# Check archives and metadata of the backup
+# Checks archives and metadata of the backup
 #
 check_backup_metadata()
 {
@@ -174,10 +174,15 @@ check_backup_metadata()
 	[ ! -s swap.size ] ||
 		swapsize="$(head -n1 swap.size)M"
 	rootsize="$(head -n1 root.size)M"
-	[ -n "$create_users_list" ]    ||
-	is_file_exists "var.$ziptype"  ||
-	is_file_exists "home.$ziptype" ||
+
+	if [ -n "$create_users_list" ] || is_file_exists "home.$ziptype"; then
+		datapart_mp=/home
+	elif is_file_exists "var.$ziptype"; then
+		datapart_mp=/var
+	else
 		rootsize=
+	fi
+
 	[ "$action" != chkmeta ] ||
 		fatal F000 "Metadata checked successfully!"
 	cd - >/dev/null ||:
@@ -370,6 +375,7 @@ __check_config()
 			fatal F000 "Invalid target drive configuration!"
 	elif [ -n "$multi_targets" ]; then
 		num_targets=0
+		ppartsep=
 
 		for i in $multi_targets; do
 			i="$(readlink -fv -- "/dev/${i##/dev/}" 2>/dev/null ||:)"
@@ -392,6 +398,7 @@ __check_config()
 			fatal F000 "Invalid target drive(s) configuration!"
 		[ "$num_targets" = 1 ] ||
 			multi_drives_config
+		ppartsep=
 	fi
 
 	# Changing defaults

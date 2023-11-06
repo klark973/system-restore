@@ -25,6 +25,7 @@ multi_drives_config()
 
 	[ -z "$bootsize" ] || [ "${platform:0:3}" = e2k ] ||
 		fatal F000 "$msg" "timeshift"
+	datapart_mp=/home
 	btrfspart=
 }
 
@@ -121,7 +122,7 @@ timeshift_make_scheme()
 	btrfspart=
 	__prepare_${pt_scheme}_layout
 	rootpart="/@"
-	homepart="/@home"
+	datapart="/@home"
 }
 
 # Sets paths for all partition device nodes

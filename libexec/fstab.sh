@@ -57,19 +57,15 @@ __make_new_fstab()
 		old_uuid="$(head -n1 "$workdir/root.uuid" |sed 's,\-,\\-,g')"
 		run sed -i -e "s,^UUID=$old_uuid,UUID=$rootuuid," "$f"
 	fi
-	if [ -z "$keep_uuids" ] && [ -n "$var_part" ] && [ -n "$var_uuid" ]; then
-		old_uuid="$(head -n1 "$workdir/var.uuid" |sed 's,\-,\\-,g')"
-		run sed -i -e "s,^UUID=$old_uuid,UUID=$var_uuid," "$f"
-	fi
 
-	# Editing /home partition entry
-	if [ -n "$homepart" ] && [ -n "$homeuuid" ]; then
+	# Editing data partition entry
+	if [ -n "$datapart" ] && [ -n "$datauuid" ]; then
 		if [ -z "$keep_uuids" ] && [ -s "$workdir/home.uuid" ]; then
 			old_uuid="$(head -n1 "$workdir/home.uuid" |sed 's,\-,\\-,g')"
-			run sed -i -e "s,^UUID=$old_uuid,UUID=$homeuuid," "$f"
+			run sed -i -e "s,^UUID=$old_uuid,UUID=$datauuid," "$f"
 		elif [ ! -s "$workdir/home.uuid" ]; then
 			cat >>"$f" <<-EOF
-			UUID=$homeuuid	/home	ext4	relatime,nosuid	1 2
+			UUID=$datauuid	/home	ext4	relatime,nosuid	1 2
 			EOF
 		fi
 	fi

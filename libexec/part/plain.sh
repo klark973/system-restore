@@ -56,13 +56,9 @@ __prepare_gpt_layout()
 
 	# DATA or HOME partition
 	if [ -n "$rootsize" ]; then
-		if is_file_exists "var.$ziptype"; then
+		[ "$datapart_mp" = /home ] && echo ",,H" ||
 			echo ","
-			var_part="$i"
-		else
-			echo ",,H"
-			homepart="$i"
-		fi
+		datapart="$i"
 	fi
 }
 
@@ -113,13 +109,8 @@ __simple_dos_layout()
 
 	# DATA or HOME partition
 	if [ -n "$rootsize" ]; then
-		if is_file_exists "var.$ziptype"; then
-			echo ","
-			var_part="$i"
-		else
-			echo ","
-			homepart="$i"
-		fi
+		echo ","
+		datapart="$i"
 	fi
 }
 
@@ -171,13 +162,8 @@ __complex_dos_layout()
 
 	# DATA or HOME partition
 	if [ -n "$rootsize" ]; then
-		if is_file_exists "var.$ziptype"; then
-			echo ","
-			var_part=6
-		else
-			echo ","
-			homepart=6
-		fi
+		echo ","
+		datapart=6
 	fi
 }
 
@@ -228,10 +214,8 @@ define_parts()
 		bootpart="$(devnode "$bootpart")"
 	[ -z "$swappart" ] ||
 		swappart="$(devnode "$swappart")"
-	[ -z "$var_part" ] ||
-		var_part="$(devnode "$var_part")"
-	[ -z "$homepart" ] ||
-		homepart="$(devnode "$homepart")"
+	[ -z "$datapart" ] ||
+		datapart="$(devnode "$datapart")"
 	rootpart="$(devnode "$rootpart")"
 }
 
@@ -257,10 +241,8 @@ set_gpt_part_names()
 		gpt_part_label "$target" "${swappart##$x}" "$swapname"
 	[ -z "$rootpart" ] || [ -z "$rootname" ] ||
 		gpt_part_label "$target" "${rootpart##$x}" "$rootname"
-	[ -z "$var_part" ] || [ -z "$var_name" ] ||
-		gpt_part_label "$target" "${var_part##$x}" "$var_name"
-	[ -z "$homepart" ] || [ -z "$homename" ] ||
-		gpt_part_label "$target" "${homepart##$x}" "$homename"
+	[ -z "$datapart" ] || [ -z "$dataname" ] ||
+		gpt_part_label "$target" "${datapart##$x}" "$dataname"
 	log "All GUID/GPT partitions has been renamed"
 }
 
