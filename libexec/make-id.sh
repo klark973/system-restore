@@ -2,18 +2,20 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 #############################################################
 ### Creates 'id' sub-directory for profile auto-detection ###
 #############################################################
 
+[ ! -d id ] ||
+	fatal F000 "DMI information already collected."
 d=/sys/class/dmi/id
 [ -d "$d" ] ||
 	d=/sys/devices/virtual/dmi/id
 [ -d "$d" ] ||
 	fatal F000 "DMI information is not supported on this platform."
-mkdir -p -m0755 id
+mkdir -m 0755 id
 umask 0022
 
 for field in \

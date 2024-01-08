@@ -3,7 +3,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 # Variables which could be empty
 for var_name in $chroot_vars; do
@@ -31,7 +31,7 @@ __specialize_kver()
 	log "Linux kernel found: '%s'" "$kver"
 
 	# Explicity ignoring keep_uuids:
-	# image cleanup required for deploy
+	# cleanup is required for deployment
 	if [ -s "/boot/initrd-$kver.img" ]; then
 		log "Initramfs image found: %s" "/boot/initrd-$kver.img"
 	else

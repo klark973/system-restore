@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 # Called before including restore.ini files
 # supplied with the backup and/or profile,
@@ -45,9 +45,9 @@ platform_setup_internals()
 		[ -z "$uefiboot" ] || bios2uefi=1
 	fi
 
-	# Convert allowed with deploy action only
+	# Convert is only allowed with the 'deploy' action
 	if [ -n "$uefi2bios" ] || [ -n "$bios2uefi" ]; then
-		local msg="Use deploy mode for restore from this backup!"
+		local msg="Use deployment mode for restore from this backup!"
 		[ "$action" = deploy ] || fatal F000 "$msg"
 	fi
 }
@@ -57,21 +57,16 @@ platform_setup_internals()
 #
 setup_bootloaders_platform()
 {
-	local v
-
 	if [ -z "$uefiboot" ] || [ -n "$biosboot_too" ]; then
 		log "Installing %s for BIOS/CSM boot mode..." "grub-pc"
+		run grub-install \
+			--target=i386-pc $grub_install_opts \
+			--boot-directory=/boot --recheck -- "$target"
 		need_grub_update=1
-
-		for v in ${multi_targets:-$target}; do
-			run grub-install \
-				--target=i386-pc $grub_install_opts \
-				--boot-directory=/boot --recheck -- "$v"
-		done
 	fi
 
 	if [ -n "$uefiboot" ]; then
-		local v f="BOOT/BOOTX64.EFI"
+		local f="BOOT/BOOTX64.EFI"
 
 		[ -n "$safe_uefi_boot" ] && [ -s "/boot/efi/EFI/$f" ] ||
 			f="$efi_distributor/grubx64.efi"
@@ -82,14 +77,11 @@ setup_bootloaders_platform()
 			log "Bootloader %s for %s already installed" "grub-efi" "$platform"
 		else
 			log "Installing bootloader %s for %s..." "grub-efi" "$platform"
+			run grub-install \
+				--target=x86_64-efi $grub_install_opts \
+				--efi-directory=/boot/efi --recheck \
+				--boot-directory=/boot -- "$target"
 			need_grub_update=1
-
-			for v in ${multi_targets:-$target}; do
-				run grub-install \
-					--target=x86_64-efi $grub_install_opts \
-					--efi-directory=/boot/efi --recheck \
-					--boot-directory=/boot -- "$v"
-			done
 		fi
 	fi
 }

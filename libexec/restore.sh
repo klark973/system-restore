@@ -2,14 +2,209 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 # Bootstrap
 [ -z "$cleanup_after" ] ||
-	. "$utility"/cleanup.sh
-. "$utility"/restpart.sh
-. "$utility"/format.sh
-. "$utility"/chroot.sh
+	. "$libdir"/cleanup.sh
+. "$libdir"/chroot.sh
+
+
+do_deploy_action()
+{
+	setup_internals
+	make_pt_scheme
+	[ -z "$showdiag" ] ||
+		. "$libdir"/diaginfo.sh
+	[ -z "$validate" ] ||
+		. "$libdir"/validate.sh
+	wipe_target
+	apply_scheme
+	define_parts
+	format_parts
+	restsys_parts
+	restdata_part
+	[ -z "$cleanup_after" ] ||
+		cleanup_parts
+	replace_uuids
+	rename_iface
+	make_unique
+	prepare_chroot
+	before_chroot
+	[ -z "$clear_nvram" ] ||
+		clear_nvram
+	run_in_chroot
+	after_chroot
+	cleanup_chroot
+	[ -z "$uefiboot" ] ||
+		record_nvram
+	umount_parts
+}
+
+do_fullrest_action()
+{
+	setup_internals
+	use_pt_scheme
+	[ -z "$showdiag" ] ||
+		. "$libdir"/diaginfo.sh
+	[ -z "$validate" ] ||
+		. "$libdir"/validate.sh
+	wipe_target
+	apply_scheme
+	define_parts
+	format_parts
+	restsys_parts
+	restdata_part
+	[ -z "$cleanup_after" ] ||
+		cleanup_parts
+	replace_uuids
+	rename_iface
+	make_unique
+	prepare_chroot
+	before_chroot
+	[ -z "$clear_nvram" ] ||
+		clear_nvram
+	run_in_chroot
+	after_chroot
+	cleanup_chroot
+	[ -z "$uefiboot" ] ||
+		record_nvram
+	umount_parts
+}
+
+do_sysrest_action()
+{
+	setup_internals
+	check_pt_scheme
+	[ -z "$showdiag" ] ||
+		. "$libdir"/diaginfo.sh
+	[ -z "$validate" ] ||
+		. "$libdir"/validate.sh
+	format_parts
+	restsys_parts
+	[ -z "$cleanup_after" ] ||
+		cleanup_parts
+	replace_uuids
+	rename_iface
+	make_unique
+	prepare_chroot
+	before_chroot
+	[ -z "$clear_nvram" ] ||
+		clear_nvram
+	run_in_chroot
+	after_chroot
+	cleanup_chroot
+	[ -z "$uefiboot" ] ||
+		record_nvram
+	umount_parts
+}
+
+restsys_parts()
+{
+	: TODO...
+}
+
+restdata_part()
+{
+	: TODO...
+}
+
+# Creates a file system on a specified device
+#
+fmt_part()
+{
+	local pfx="$1"
+	local device display opts=
+	local label= uuid= fstype=ext4
+
+	eval "device=\"\$${pfx}part\""
+	eval "display=\"\$${pfx}name\""
+	msg "${L0000-Formatting %s (%s)...}" "$display" "$device"
+
+	if [ "$pfx" = prep ] || [ "$pfx" = bbp_ ]; then
+		log "Complete cleaning the device %s..." "$device"
+		run dd if=/dev/zero of="$device" bs=1M >/dev/null ||:
+		return 0
+	fi
+
+	log "Creating a %s file system on the device %s..." "$fstype" "$device"
+
+	case "$pfx" in
+	esp_)
+		uuid="$(head -n1 -- "$workdir/esp.uuid" |sed 's,\-,\\-,g')"
+		run mkfs.fat -F32 -f2 -n "$label" -- "$esp_part"
+		pfx=
+		;;
+	boot)
+		[ "${platform:0:3}" != e2k ] ||
+			fstype=ext3
+		;;
+	swap)
+		run mkswap -L "$label" -- "$swappart"
+		pfx=
+		;;
+	esac
+
+	if [ -n "$pfx" ]; then
+		run "mkfs.$fstype" -q -j -L "$label" -- "$device"
+	fi
+}
+
+#
+#
+format_target()
+{
+	local post_fmt=
+
+	# Boot partitions
+	[ -z "$preppart" ] ||
+		fmt_part prep
+	[ -z "$esp_part" ] ||
+		fmt_part esp_
+	[ -z "$bbp_part" ] ||
+		fmt_part bbp_
+
+	# System and data partitions
+	if [ -n "$swappart" ]; then
+		[ ! -b "$swappart" ] && post_fmt=1 ||
+			fmt_part swap
+	fi
+	if [ -n "$rootpart" ]; then
+		[ ! -b "$rootpart" ] && post_fmt=1 ||
+			fmt_part root
+	fi
+	if [ -n "$datapart" ]; then
+		[ ! -b "$datapart" ] && post_fmt=1 ||
+			fmt_part data
+	fi
+
+	# Post-format
+	[ -z "$post_fmt" ] ||
+		${partitioner}_post_format
+	log "All partitions on the target device have been formatted"
+}
+
+# The default implementation for mounting the target partition
+# at the specified destination
+#
+mnt_part()
+{
+	local part="$1" dest="$2"
+	local fstype=ext4 opts=relatime
+
+	if [ ! -b "$part" ]; then
+		${partitioner}_mnt_part "$part" "$dest"
+		return 0
+	elif [ "$dest" = "$destdir/boot" ] && [ "${platform:0:3}" = e2k ]; then
+		fstype=ext3
+	elif [ "$dest" = "$destdir/boot/efi" ]; then
+		fstype=vfat
+		opts="$esp_opts"
+	fi
+
+	run mount -t "$fstype" -o "$opts" -- "$part" "$dest"
+	log "The %s partition '%s' has been mounted to '%s'" "$fstype" "$part" "$dest"
+}
 
 # It can be overridden in $backup/restore.sh
 # or $backup/$profile/restore.sh
@@ -43,12 +238,12 @@ setup_internals()
 		dsz="$(get_disk_size "$target")"
 	if [ "$dsz" -gt "$(human2size 2T)" ]; then
 		if [ "$action" = fullrest ]; then
-			dsz="Use deploy mode for restore from "
+			dsz="Use deployment mode for restore from "
 			dsz="$dsz this backup to the disks >2Tb!"
 			[ "$pt_scheme" = gpt ] ||
 				fatal F000 "$dsz"
 		elif [ "$action" = deploy ]; then
-			dsz="DOS/MBR labeling is inpossible with disks >2Tb!"
+			dsz="DOS/MBR labeling is not possible with disks >2Tb!"
 			[ -z "$force_mbr_label" ] ||
 				fatal F000 "$dsz"
 			pt_scheme=gpt
@@ -65,7 +260,7 @@ setup_internals()
 #
 make_new_fstab()
 {
-	. "$utility"/fstab.sh
+	. "$libdir"/fstab.sh
 
 	__make_new_fstab
 }
@@ -75,7 +270,7 @@ make_new_fstab()
 #
 make_new_grubcfg()
 {
-	. "$utility"/grubcfg.sh
+	. "$libdir"/grubcfg.sh
 
 	__make_new_grubcfg
 }
@@ -175,29 +370,34 @@ record_nvram()
 	: TODO...
 }
 
-umount_parts()
+# Unmounts all partitions which was mounted to $destdir
+#
+unmount_all()
 {
-	run sync
-	[ -z "$esp_part" ] ||
-		run umount -- "$destdir"/boot/efi 2>/dev/null ||
-			run umount -fl -- "$destdir"/boot/efi
-	[ -z "$bootpart" ] ||
-		run umount -- "$destdir"/boot 2>/dev/null ||
-			run umount -fl -- "$destdir"/boot
-	[ -z "$datapart" ] ||
-		run umount -- "${destdir}${datapart_mp}" 2>/dev/null ||
-			run umount -fl -- "${destdir}${datapart_mp}"
-	run umount -- "$destdir" 2>/dev/null ||
-		run umount -fl -- "$destdir" ||:
-	run rmdir  -- "$destdir" 2>/dev/null ||:
-	run swapoff -a 2>/dev/null ||:
+	local mp
+
+	run sync; run cd /
+
+	( grep -s -- " $destdir/" /proc/mounts	|
+		cut -f2 -d ' '			|
+		grep -- "$destdir/"		|
+		tac
+	  grep -s -- " $destdir " /proc/mounts	|
+		cut -f2 -d ' '			|
+		grep -- "$destdir"		|
+		sort -u
+	) |
+	while read -r mp; do
+		run umount -- "$mp" || run umount -fl -- "$mp"
+		log "The partition '%s' has been unmounted" "$mp"
+	done
 }
 
-# Including user-defined hooks
-if [ -n "$use_hooks" ] && [ -n "$unique_clone" ]; then
-	[ ! -s "$backup"/restore.sh ] ||
-		. "$backup"/restore.sh
-	[ -z "$profile" ] || [ ! -s "$backup/$profile"/restore.sh ] ||
-		. "$backup/$profile"/restore.sh
+
+# Using user-defined hooks
+if [ -n "$use_hooks" ]; then
+	user_config restore.sh
+	[ -z "$profile" ] ||
+		user_config "$profile"/restore.sh
 fi
 

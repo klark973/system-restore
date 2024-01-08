@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 ##########################################################
 ### Common functions which can used also in the chroot ###
@@ -12,8 +12,8 @@
 #
 nls_config()
 {
-	[ ! -s "$utility/l10n/$lang/$1.sh" ] ||
-		. "$utility/l10n/$lang/$1.sh"
+	[ ! -s "$libdir/l10n/$lang/$1.sh" ] ||
+		. "$libdir/l10n/$lang/$1.sh"
 }
 
 # Enable native language support
@@ -24,7 +24,7 @@ nls_locale_setup()
 	lang="${LC_ALL:-$lang}"
 	lang="${LC_MESSAGES:-$lang}"
 	lang="${lang%.*}"
-	[ -n "$lang" ] && [ -s "$utility/l10n/$lang"/help.msg ] ||
+	[ -n "$lang" ] && [ -s "$libdir/l10n/$lang"/help.msg ] ||
 		lang="en_US"
 	nls_config common
 }
@@ -73,15 +73,17 @@ run()
 	"$@" || return $?
 }
 
-# Base implementation, it will be overridden in dialogs.sh
+# Base implementation, it can be overridden in dialogs.sh
 #
 show_error()
 {
 	local fcode="${1:1}" fmt="$2"
 	local msg="${F000-%s fatal[%s]}"
+	local norm='\033[00m'
+	local err='\033[01;31m'
 
 	shift 2
-	msg "$msg: $fmt\n" "$progname" "$fcode" "$@" >&2
+	msg "${err}$msg: $fmt${norm}" "$progname" "$fcode" "$@" >&2
 }
 
 # Default implementation of the exit handler
@@ -111,6 +113,8 @@ fatal()
 {
 	local fcode="$1" fmt="$2"
 	local msg rv="${fcode:1:1}"
+	local norm='\033[00m'
+	local good='\033[00;32m'
 
 	shift 2
 	nls_config fatal
@@ -121,7 +125,7 @@ fatal()
 
 	if [ "$rv" = "$EXIT_SUCCESS" ]; then
 		log "SUCCESS: $fmt" "$@"
-		msg "$msg" "$@"
+		msg "${good}${msg}${norm}" "$@"
 		exit $EXIT_SUCCESS
 	fi
 

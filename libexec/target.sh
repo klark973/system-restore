@@ -2,7 +2,29 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
+
+#########################################################
+### Supplimental functions for work with target disks ###
+#########################################################
+
+# Creates a disk label and applies a new partition scheme.
+# This is a default implementation for apply_pt_scheme().
+#
+apply_scheme_default()
+{
+	local cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
+
+	msg "${L0000-Please wait, initializing target devices...}"
+	wipe_targets
+
+	log "Initializing the target device: %s..." "$target"
+	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
+	rereadpt "$target"
+	set_gpt_part_names
+	run wipefs -a -- $(list_partitions "$target") >/dev/null ||:
+	run rm -f -- "$disk_layout"
+}
 
 # Determinates the device name of the whole disk drive
 # for any specified device such as a disk partition
@@ -48,7 +70,9 @@ protect_boot_devices()
 		log "Mount point or device will be ignored: %s" "$1"
 	}
 
-	for mp in $protected_mpoints; do
+	for mp in $protected_mpoints \
+		  $(grep -E '^\/dev\/' /proc/mounts |cut -f1 -d ' ')
+	do
 		if [ -d "$mp" ] && mountpoint -q -- "$mp"; then
 			number="$(mountpoint -d -- "$mp")"
 		elif [ -b "$mp" ]; then
@@ -211,12 +235,16 @@ check_target_size()
 # Sets the $target variable in a multi-drives configuration.
 # The default implementation just selects only one device
 # with the maximum capacity. It can be reimplemented in
-# $utility/part/$partitioner.sh or $backup/$partitioner.sh
+# $libdir/part/$partitioner.sh or $backup/$partitioner.sh
 #
 multi_drives_setup()
 {
 	__select_biggest_drive
-	[ -z "$target" ] || check_target_size
+
+	if [ -n "$target" ]; then
+		check_target_size
+		boot_devices="$(get_disk_id)"
+	fi
 }
 
 # Prepares partition scheme for the target disk,
@@ -239,7 +267,7 @@ make_pt_scheme()
 }
 
 # Placeholder: this function must be reimplemented in
-# $utility/part/$partitioner.sh or $backup/$partitioner.sh,
+# $libdir/part/$partitioner.sh or $backup/$partitioner.sh,
 # it must assign paths for all partition device nodes
 #
 define_parts()
@@ -250,7 +278,7 @@ define_parts()
 }
 
 # Placeholder: this function must be reimplemented in
-# $utility/part/$partitioner.sh or $backup/$partitioner.sh,
+# $libdir/part/$partitioner.sh or $backup/$partitioner.sh,
 # it creates a disk label and applies a new partition scheme
 #
 apply_scheme()
@@ -260,10 +288,10 @@ apply_scheme()
 	fatal F000 "$msg" "apply_scheme()"
 }
 
-# Placeholder: this function must be reimplemented in
-# $utility/part/$partitioner.sh or $backup/$partitioner.sh,
-# it deinitializes all disk subsystems after unmounting
-# partitions and before finalizing the primary action
+# Deinitializes all disk subsystems after unmounting
+# partitions and before finalizing the primary action,
+# it can be overridden in $libdir/part/$partitioner.sh
+# or $backup/$partitioner.sh
 #
 deinit_disks()
 {
@@ -305,7 +333,9 @@ __search_tgtdev_intl()
 		! in_array "$target" $protected_devices ||
 			fatal F000 "Target device (%s) is write protected!" "$target"
 		get_disk_info
-		log "Selected target device: $target: $diskinfo"
+		boot_devices="$(get_disk_id)"
+		log "Selected target device: %s: %s" "$target" "$diskinfo"
+		log "Selected boot device: %s" "$boot_devices"
 		return 0
 	fi
 
@@ -343,10 +373,12 @@ __search_tgtdev_intl()
 		[ -z "$xsz" ] || [ "$dsz" -le "$xsz" ] 2>/dev/null ||
 			fatal F000 "Specified target device (%s) is too big!" "$target"
 		[ -z "$target_model_pattern" ] || in_array "$target" $models ||
-			fatal F000 "Target device (%s) and pattern mismatch!" "$target"
+			fatal F000 "Target device (%s) and pattern do not match!" "$target"
 		get_disk_info
 		check_target_size
-		log "Specified target device: $target: $diskinfo"
+		boot_devices="$(get_disk_id)"
+		log "Specified target device: %s: %s" "$target" "$diskinfo"
+		log "Selected boot device: %s" "$boot_devices"
 		return 0
 	fi
 
@@ -449,7 +481,9 @@ __search_tgtdev_intl()
 		multi_targets=
 		get_disk_info
 		check_target_size
+		boot_devices="$(get_disk_id)"
 		log "The target device found: %s: %s" "$target" "$diskinfo"
+		log "Selected boot device: %s" "$boot_devices"
 
 		if [ "$action" = scandisk ]; then
 			msg "%s: %s" "$target" "$diskinfo"
@@ -474,8 +508,9 @@ __search_tgtdev_intl()
 		target=
 		multi_drives_setup
 		[ -n "$target" ] ||
-			fatal F000 "Couldn't create multi-drives setup!"
+			fatal F000 "Couldn't create multi-drives configuration!"
 		log "The target device will be created: %s" "$target"
+		log "Boot device(s): %s" "$boot_devices"
 	fi
 }
 
@@ -484,15 +519,15 @@ __search_tgtdev_intl()
 #
 get_disk_id()
 {
-	local dev="$1"
+	local dev="${1-$target}"
 
-	dev="$(mountpoint -x -- "$dev")"
-	dev="$(grep -s 'S:disk/by-id/' /run/udev/data/"b$dev" \
-			2>/dev/null |head -n1 |cut -c3-)"
+	dev="$(udevadm info -- "$dev" 2>/dev/null   |
+			grep -E '^S: disk\/by-id\/' |
+			head -n1 |cut -c4-)"
 	if [ -n "$dev" ] && [ -L "/dev/$dev" ]; then
 		printf "/dev/%s" "$dev"
 	else
-		printf "%s" "$1"
+		printf "%s" "$dev"
 	fi
 }
 
@@ -510,7 +545,7 @@ devnode()
 }
 
 # Wipes specified devices and all partitions on them, it can be
-# overridden in $utility/part/$partitioner.sh or $backup/$partitioner.sh
+# overridden in $libdir/part/$partitioner.sh or $backup/$partitioner.sh
 #
 wipe_targets()
 {
@@ -520,14 +555,16 @@ wipe_targets()
 	if [ -z "${__subsystems_stopped-}" ]; then
 		log "Stopping all subsystems..."
 
-		( set +e
-		  set +E
-		  swapoff -a
-		  vgchange -a n
-		  mdadm --stop --scan
-		  vgchange -a n
-		  mdadm --stop --scan
-		) &>/dev/null ||:
+		if [ -z "$dryrun" ]; then
+			( set +e
+			  set +E
+			  swapoff -a
+			  vgchange -a n
+			  mdadm --stop --scan
+			  vgchange -a n
+			  mdadm --stop --scan
+			) &>/dev/null ||:
+		fi
 
 		__subsystems_stopped=1
 	fi
@@ -536,20 +573,25 @@ wipe_targets()
 		devices="${multi_targets:-$target}"
 	log "Wiping device(s): %s..." "$devices"
 
-	for dev in $devices; do
-		plist="$(set +f; ls -r -- "$dev"?* 2>/dev/null ||:)"
+	if [ -z "$dryrun" ]; then
+		for dev in $devices; do
+			plist="$(list_partitions "$dev")"
 
-		( set +e
-		  set +E
-		  [ -z "$plist" ] ||
-			wipefs -a -- $plist
-		  mdadm --zero-superblock "$dev"
-		  dd if=/dev/zero bs=1M count=2 of="$dev"
-		  wipefs -a -- "$dev"
-		  sync "$dev"
-		  udevadm trigger -q "$dev"
-		) &>/dev/null ||:
-	done
+			( set +e
+			  set +E
+			  [ -z "$plist" ] ||
+				wipefs -a -- $plist
+			  mdadm --zero-superblock "$dev"
+			  dd if=/dev/zero bs=1M count=2 of="$dev"
+			  wipefs -a -- "$dev"
+			  sync "$dev"
+			  [ -z "$plist" ] ||
+				rm -f -- $plist
+			  blockdev --rereadpt -- "$dev"
+			  udevadm trigger -q  -- "$dev"
+			) &>/dev/null ||:
+		done
+	fi
 
 	run udevadm settle -t5 >/dev/null ||:
 }
@@ -560,14 +602,12 @@ wipe_targets()
 #
 rereadpt()
 {
-	local n junk partname start lenght device="${1-}"
-	local cmd="LC_ALL=C sfdisk -q -f -l --color=never"
+	local n partname start lenght device="${1:-$target}"
+	local junk cmd="LC_ALL=C sfdisk -q -f -l --color=never"
 
-	[ -n "$device" ] ||
-		device="$target"
 	log "Telling the kernel that the partition table on %s has been changed" "$device"
 
-	run sync "$device" ||:
+	run sync "$device"
 
 	run $cmd -- "$device" |sed '1d;s/  */ /g' |
 	while IFS=' ' read -r partname start lenght junk; do
@@ -581,22 +621,27 @@ rereadpt()
 		run addpart "$device" "$n" "$start" "$lenght" >/dev/null ||:
 	done
 
-	run udevadm trigger -q "$device" >/dev/null ||:
+	run blockdev --rereadpt -- "$device" >/dev/null ||:
+	run udevadm trigger -q  -- "$device" >/dev/null ||:
 
-	junk=( $($cmd -- "$device" |sed '1d;s/ .*//g') )
-	n="${#junk[@]}"; lenght="$n"
 	log "Waiting for new partitions from the kernel to appear..."
 
-	while :; do
-		for partname in "${junk[@]}"; do
-			[ ! -b "$partname" ] ||
-				n=$(( $n - 1 ))
+	if [ -z "$dryrun" ]; then
+		junk=( $($cmd -- "$device" |sed '1d;s/ .*//g') )
+		n="${#junk[@]}"
+		lenght="$n"
+
+		while :; do
+			for partname in "${junk[@]}"; do
+				[ ! -b "$partname" ] ||
+					n=$(( $n - 1 ))
+			done
+			[ "$n" -gt 0 ] ||
+				break
+			n="$lenght"
+			sleep .2
 		done
-		[ "$n" -gt 0 ] ||
-			break
-		n="$lenght"
-		sleep .2
-	done
+	fi
 
 	run udevadm settle -t5 >/dev/null ||:
 }
@@ -646,29 +691,29 @@ gpt_part_label()
 }
 
 # Creates a disk label and applies a new partition scheme,
-# this is a default implementation
-#
-apply_scheme_default()
-{
-	local cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
-
-	msg "${L0000-Please wait, initializing the target device(s)...}"
-	wipe_targets
-
-	log "Initializing the target device: %s..." "$target"
-	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
-	rereadpt "$target"
-	set_gpt_part_names
-	run wipefs -a -- $(set +f; ls -r -- "$target"?*) >/dev/null ||:
-	run rm -f -- "$disk_layout"
-}
-
-# Creates a disk label and applies a new partition scheme,
-# it can be reimplemented in $utility/part/$partitioner.sh
+# it can be reimplemented in $libdir/part/$partitioner.sh
 # or $backup/$partitioner.sh
 #
 apply_scheme()
 {
 	apply_scheme_default
+}
+
+# Returns a list of partitions on the specified device
+#
+list_partitions()
+{
+	local dev="$1"
+
+	set +f
+
+	case "$dev" in
+	*[0-9])
+		ls -r -- "$dev"p[0-9]* 2>/dev/null ||:
+		;;
+	*)
+		ls -r -- "$dev"?* 2>/dev/null ||:
+		;;
+	esac
 }
 

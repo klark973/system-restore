@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 # Add variable(s) to the list for transfer it to the chroot
 #
@@ -80,10 +80,10 @@ prepare_chroot()
 			run cp -Lf -- "$backup/$profile"/chroot.sh "$d"/profile.sh
 	fi
 
-	run cp -Lf -- "$utility/arch/$platform.sh" "$d"/platform.sh
-	run cp -Lf -- "$utility"/version.sh "$d"/
-	run cp -Lf -- "$utility"/logger.sh "$d"/
-	run cp -Lf -- "$utility"/slave.sh "$d"/
+	run cp -Lf -- "$libdir/arch/$platform.sh" "$d"/platform.sh
+	run cp -Lf -- "$libdir"/version.sh "$d"/
+	run cp -Lf -- "$libdir"/logger.sh "$d"/
+	run cp -Lf -- "$libdir"/slave.sh "$d"/
 	run chmod -- 0755 "$d"/slave.sh "$f"
 	prepare_chroot_tbh
 }

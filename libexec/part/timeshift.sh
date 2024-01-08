@@ -2,13 +2,13 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 ############################################################
 ### The "timeshift" disk partitioning in deployment mode ###
 ############################################################
 
-readonly BTRFS_PARTNAME="${BTRFS_PARTNAME-ALTLINUX}"
+readonly BTRFS_PARTNAME="${BTRFS_PARTNAME-$root_gpt_label}"
 
 # Returns a list of partitioner requirements
 #
@@ -17,16 +17,80 @@ timeshift_requires()
 	printf "mkfs.btrfs btrfs"
 }
 
+# An additional single-drive configuration checker
+#
+single_drive_config()
+{
+	local msg
+
+	msg="Don't use a separate /boot with '%s' partitioner."
+	[ -z "$bootsize" ] || [ "${platform:0:3}" = e2k ] ||
+		fatal F000 "$msg" "timeshift"
+	msg="A separate /home is required for '%s' partitioner."
+	[ -n "$create_users_list" ] || is_file_exists "home.$ziptype" ||
+		fatal F000 "$msg" "timeshift"
+	datapart_mp=/home
+	btrfspart=
+	rootsize=
+}
+
 # An additional multi-drives configuration checker
 #
 multi_drives_config()
 {
-	local msg="Don't use a separate /boot with the '%s' partitioner."
+	single_drive_config
+}
 
-	[ -z "$bootsize" ] || [ "${platform:0:3}" = e2k ] ||
-		fatal F000 "$msg" "timeshift"
-	datapart_mp=/home
+# Sets paths for all partition device nodes
+#
+define_parts()
+{
+	[ -z "$preppart" ] ||
+		preppart="$(devnode "$preppart")"
+	[ -z "$esp_part" ] ||
+		esp_part="$(devnode "$esp_part")"
+	[ -z "$bbp_part" ] ||
+		bbp_part="$(devnode "$bbp_part")"
+	[ -z "$bootpart" ] ||
+		bootpart="$(devnode "$bootpart")"
+	[ -z "$swappart" ] ||
+		swappart="$(devnode "$swappart")"
+	btrfspart="$(devnode "$btrfspart")"
+}
+
+# Sets the GUID/GPT PART-LABEL for each created partition
+#
+set_gpt_part_names()
+{
+	local x="${target}p"
+
+	[ "$pt_scheme" = gpt ] ||
+		return 0
+	[ "$ppartsep" = 1 ] ||
+		x="$target"
+	[ -z "$preppart" ] || [ -z "$prep_gpt_label" ] ||
+		gpt_part_label "$target" "${preppart##$x}" "$prep_gpt_label"
+	[ -z "$esp_part" ] || [ -z "$esp__gpt_label" ] ||
+		gpt_part_label "$target" "${esp_part##$x}" "$esp__gpt_label"
+	[ -z "$bbp_part" ] || [ -z "$bbp__gpt_label" ] ||
+		gpt_part_label "$target" "${bbp_part##$x}" "$bbp__gpt_label"
+	[ -z "$bootpart" ] || [ -z "$boot_gpt_label" ] ||
+		gpt_part_label "$target" "${bootpart##$x}" "$boot_gpt_label"
+	[ -z "$swappart" ] || [ -z "$swap_gpt_label" ] ||
+		gpt_part_label "$target" "${swappart##$x}" "$swap_gpt_label"
+	[ -z "$btrfspart" ] || [ -z "$BTRFS_PARTNAME" ] ||
+		gpt_part_label "$target" "${btrfspart##$x}" "$BTRFS_PARTNAME"
+	log "All GUID/GPT partitions have been renamed"
+}
+
+# Prepares partition scheme for the target disk
+#
+timeshift_make_scheme()
+{
 	btrfspart=
+	__prepare_${pt_scheme}_layout
+	rootpart="@"
+	datapart="@home"
 }
 
 # Creates a GUID/GPT disk layout
@@ -115,55 +179,37 @@ __prepare_dos_layout()
 	btrfspart="$i"
 }
 
-# Prepares partition scheme for the target disk
+# Post-formatting function specific to this partitioner
 #
-timeshift_make_scheme()
+timeshift_post_format()
 {
-	btrfspart=
-	__prepare_${pt_scheme}_layout
-	rootpart="/@"
-	datapart="/@home"
+	local label="${root_fs_label:-$BTRFS_PARTNAME}"
+
+	msg "${L0000-Formatting %s (%s)...}" "BTRFS" "$btrfspart"
+	log "Creating a btrfs partition specifically for Timeshift..."
+
+	# NB: there is no way to restore the old UUID of the partition
+	run mkfs.btrfs -q -f${label:+ -L "$BTRFS_PARTNAME"} -- "$btrfspart"
+	run mkdir -p -m 0755 -- "$destdir"
+	run mount -t btrfs -- "$btrfspart" "$destdir"
+	run cd -- "$destdir"/
+	run btrfs subvolume create "./$rootpart"
+	run btrfs subvolume create "./$homepart"
+	run cd - >/dev/null ||:
+	run umount -- "$destdir" ||
+		run umount -fl -- "$destdir"
+	rootuuid="$(get_fs_uuid "$btrfspart")"
+	datauuid="$rootuuid"
 }
 
-# Sets paths for all partition device nodes
+# A specific function for this partitioner that mounts
+# specified partition at the specified destination
 #
-define_parts()
+timeshift_mount_part()
 {
-	[ -z "$preppart" ] ||
-		preppart="$(devnode "$preppart")"
-	[ -z "$esp_part" ] ||
-		esp_part="$(devnode "$esp_part")"
-	[ -z "$bbp_part" ] ||
-		bbp_part="$(devnode "$bbp_part")"
-	[ -z "$bootpart" ] ||
-		bootpart="$(devnode "$bootpart")"
-	[ -z "$swappart" ] ||
-		swappart="$(devnode "$swappart")"
-	btrfspart="$(devnode "$btrfspart")"
-}
+	local part="$1" dest="$2"
 
-# Sets the GUID/GPT PART-LABEL for each created partition
-#
-set_gpt_part_names()
-{
-	local x="${target}p"
-
-	[ "$pt_scheme" = gpt ] ||
-		return 0
-	[ "$ppartsep" = 1 ] ||
-		x="$target"
-	[ -z "$preppart" ] || [ -z "$prepname" ] ||
-		gpt_part_label "$target" "${preppart##$x}" "$prepname"
-	[ -z "$esp_part" ] || [ -z "$esp_name" ] ||
-		gpt_part_label "$target" "${esp_part##$x}" "$esp_name"
-	[ -z "$bbp_part" ] || [ -z "$bbp_name" ] ||
-		gpt_part_label "$target" "${bbp_part##$x}" "$bbp_name"
-	[ -z "$bootpart" ] || [ -z "$bootname" ] ||
-		gpt_part_label "$target" "${bootpart##$x}" "$bootname"
-	[ -z "$swappart" ] || [ -z "$swapname" ] ||
-		gpt_part_label "$target" "${swappart##$x}" "$swapname"
-	[ -z "$btrfspart" ] || [ -z "$BTRFS_PARTNAME" ] ||
-		gpt_part_label "$target" "${btrfspart##$x}" "$BTRFS_PARTNAME"
-	log "All GUID/GPT partitions has been renamed"
+	run mount -t btrfs -o "relatime,subvol=$part" -- "$btrfspart" "$dest"
+	log "The btrfs partition '%s' has been mounted to '%s'" "$part" "$dest"
 }
 

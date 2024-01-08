@@ -2,17 +2,19 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 #######################################################
 ### The "raid" disk partitioning in deployment mode ###
 #######################################################
 
-# Essentially, we use the same layout, but on multiple disks
-. "$utility/part/plain.sh"
+# Essentially, we use the same layout, but
+# on a RAID array made up of several disks
+#
+. "$libdir/part/plain.sh"
 
-readonly MDADM_ARRAY_NAME="${MDADM_ARRAY_NAME-altlinux}"
-readonly IMSM_CONTAINER_NAME="${IMSM_CONTAINER_NAME-imsm}"
+readonly MDADM_ARRAY_NAME="${MDADM_ARRAY_NAME:-altlinux}"
+readonly IMSM_CONTAINER_NAME="${IMSM_CONTAINER_NAME:-imsm}"
 
 # Returns a list of partitioner requirements
 #
@@ -21,10 +23,18 @@ raid_requires()
 	local r
 
 	r="$(plain_requires)"
-	r="${r:+$r }mdadm"
-	[ -n "$no_md_sync" ] ||
-		r="$r tput"
+	r="${r:+$r }mdadm tput"
 	printf "%s" "$r"
+}
+
+# An additional single-drive configuration checker
+#
+single_drive_config()
+{
+	local msg="Single-drive configuration is not"
+	msg="$msg supported by the '%s' partitioner!"
+
+	fatal F000 "$msg" "raid"
 }
 
 # An additional multi-drives configuration checker
@@ -39,6 +49,9 @@ multi_drives_config()
 #
 multi_drives_setup()
 {
+	local dev
+
+	boot_devices=
 	__select_smallest_drive
 
 	if [ -n "$target" ]; then
@@ -50,6 +63,10 @@ multi_drives_setup()
 			target=/dev/md0
 		fi
 	fi
+
+	for dev in $multi_targets; do
+		boot_devices="$boot_devices $(get_disk_id "$dev")"
+	done
 }
 
 # Prepares partition scheme in the target array
@@ -61,11 +78,11 @@ raid_make_scheme()
 
 # Creates a disk label and applies a new partition scheme
 #
-apply_scheme()
+apply_pt_scheme()
 {
 	local cmd="LC_ALL=C sfdisk -q -f --no-reread -W always"
 
-	msg "${L0000-Please wait, initializing the target device(s)...}"
+	msg "${L0000-Please wait, initializing target devices...}"
 	wipe_targets $multi_targets
 
 	if [ -z "$imsm_container" ]; then
@@ -92,7 +109,7 @@ apply_scheme()
 	log "Initializing the RAID array: %s..." "$target"
 	run $cmd -X "$pt_scheme" -- "$target" <"$disk_layout"
 	rereadpt "$target"
-	run wipefs -a -- $(set +f; ls -r -- "$target"?*) >/dev/null ||:
+	run wipefs -a -- $(list_partitions "$target") >/dev/null ||:
 	run rm -f -- "$disk_layout"
 }
 
@@ -110,23 +127,20 @@ raid_post_unpack()
 		grep -sw FEATURES "$fname" |grep -qsw mdadm ||
 			echo "FEATURES += mdadm" >>"$fname"
 	fi
+	fdump "$fname"
 
 	# Creating /etc/mdadm.conf
 	fname="$destdir/etc/mdadm.conf"
 	if [ ! -f "$fname" ]; then
-		if [ -s "$fname.sample" ]; then
-			cp -Lf -- "$fname.sample" "$fname"
-		else
-			cat >"$fname" <<-MDADMCONF
-			# /etc/mdadm.conf  --  mdadm configuration
-			#
-			MAILADDR root
-			PROGRAM /sbin/mdadm-syslog-events
-			DEVICE partitions
-			#
-			## EOF ##
-			MDADMCONF
-		fi
+		cat >"$fname" <<-MDADMCONF
+		# /etc/mdadm.conf  --  mdadm configuration
+		#
+		MAILADDR root
+		PROGRAM /sbin/mdadm-syslog-events
+		DEVICE partitions
+		#
+		## EOF ##
+		MDADMCONF
 	fi
 
 	# Editing /etc/mdadm.conf
@@ -137,7 +151,27 @@ raid_post_unpack()
 	fdump "$fname"
 }
 
-# Returns TRUE if one of the MD-arrays is not synchronized
+# Deinitializes all disk subsystems after partitions
+# are unmounted and before finalizing the primary action
+#
+deinit_disks()
+{
+	# Use basic implementation
+	unmount_all
+
+	if [ -n "$no_md_sync" ]; then
+		cat /proc/mdstat
+	else
+		__sync_arrays_tty
+	fi
+
+	run mdadm --stop "$target"
+	[ -z "$imsm_container" ] ||
+		run mdadm --stop "$imsm_container"
+	run mdadm --stop --scan >/dev/null ||:
+}
+
+# Returns TRUE if one of MD-arrays is not synchronized
 #
 md_not_synced() {
 	local md state=
@@ -228,22 +262,5 @@ __sync_arrays_tty()
 
 	# Garbage collection
 	run rm -f -- "$tmpstat"
-}
-
-# Deinitializes all disk subsystems after partitions
-# are unmounted and before finalizing the primary action
-#
-deinit_disks()
-{
-	if [ -n "$no_md_sync" ]; then
-		cat /proc/mdstat
-	else
-		__sync_arrays_tty
-	fi
-
-	run mdadm --stop "$target"
-	[ -z "$imsm_container" ] ||
-		run mdadm --stop "$imsm_container"
-	run mdadm --stop --scan >/dev/null ||:
 }
 

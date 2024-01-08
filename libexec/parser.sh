@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 #########################################
 ### The command-line arguments parser ###
@@ -44,7 +44,7 @@ show_version()
 	local SYSREST_VERSION=0
 	local SYSREST_BUILD_DATE=0
 
-	. "$utility"/version.sh
+	. "$libdir"/version.sh
 
 	printf "%s %s %s\n" "$progname" "$SYSREST_VERSION" "$SYSREST_BUILD_DATE"
 	exit 0
@@ -52,10 +52,10 @@ show_version()
 
 show_help()
 {
-	local help="$utility/l10n/$lang/help.msg"
+	local help="$libdir/l10n/$lang/help.msg"
 
 	[ -s "$help" ] ||
-		help="$utility/l10n/en_US/help.msg"
+		help="$libdir/l10n/en_US/help.msg"
 	sed "s/@PROG@/$progname/g" "$help"
 	exit 0
 }
@@ -170,7 +170,7 @@ parse_cmdline()
 			;;
 
 		-l|--logfile)
-			check_arg --logfile "${2-}" "${L0000-log file path}"
+			check_arg --logfile "${2-}" "${L0000-log file full path}"
 			if [ "x$2" = "x-" ]; then
 				logfile=
 			else
@@ -260,9 +260,9 @@ parse_cmdline()
 	fi
 
 	# Creating 'id' sub-directory if it was requested
-	[ "$action" != make-id ] || . "$utility"/make-id.sh
+	[ "$action" != make-id ] || . "$libdir"/make-id.sh
 
 	# Require support of the protocol with remote server
-	. "$utility"/proto/"$backup_proto".sh
+	. "$libdir"/proto/"$backup_proto".sh
 }
 

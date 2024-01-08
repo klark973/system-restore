@@ -2,12 +2,12 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
-F000=""
-F001=""
-F002=""
-F003=""
-F998=""
-F999=""
+#F000=""
+#F001=""
+#F002=""
+#F003=""
+#F998=""
+#F999=""
 

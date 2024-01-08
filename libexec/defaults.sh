@@ -2,21 +2,21 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
-#####################################################
-### Common options for deploy and restore actions ###
-#####################################################
+##################################################
+### Common settings for deployment and restore ###
+##################################################
 
-# Source images and deploy system version in the numeric
-# format MAJOR[.MINOR] or empty value (by default), if
-# versioning is not used
+# Version of rootfs backup images and deployment system in the
+# numeric format MAJOR[.MINOR] or an empty value (by default),
+# if versioning is not used
 release=
 
 # Default path to RELEASE file in the target system
 release_file=/etc/rootfs-release
 
-# Non-empty when deploy or restore on the bare metal,
+# Non-empty when deployment or restore on the bare metal,
 # by default set as profile name, but can be changed
 # in the restore.ini supplied with the profile, not
 # used with the 'virtual' profile
@@ -37,7 +37,7 @@ computer=host
 # hw6: add six hexadecimal digits from Ethernet MAC-address.
 # rnd: generate random part and add it to the base name.
 # <hook>: use user-defined hostnaming function.
-# Default value is "hw6" for deploy or "copy" for restore.
+# Default value is "hw6" for deployment or "copy" for restore.
 hostnaming=copy
 
 # How to disk(s) partitioning? Available options are:
@@ -46,7 +46,7 @@ hostnaming=copy
 # lvm2: one-drive LVM2 default layout.
 # raid: multi-drives default layout.
 # <hook>: use user-defined partitioner.
-# Default value for deploy mode is "plain".
+# Default value for deployment mode is "plain".
 partitioner=plain
 
 # Source disk drives for build only one target device
@@ -71,6 +71,11 @@ target_min_capacity=
 # empty value (by default) when upper limit is not used
 target_max_capacity=
 
+# Empty (by default): auto-detect how partition device names
+# are created, 0: do not use "p" delimiter between the target
+# device name and partition number, 1: use "p" delimiter
+ppartsep=
+
 # By default this field is empty. Otherwise it contains a
 # device name with the IMSM container, for example "/dev/md0".
 # If the field is non empty, looks for target devices connected
@@ -81,15 +86,15 @@ imsm_container=
 # the RAID(s) to sync before finalizing the primary action.
 no_md_sync=
 
-# 1: enable deploy or restore to removable devices
+# 1: enable deployment or restore to removable devices
 removable=
 
-# 1: turn ON backup checksums validation before deploy
-# or restore action (by default, it is safer but longer)
+# 1: turn ON backup checksums validation before deployment
+# or restore (by default, it is safer but longer)
 validate=1
 
-# Empty: generate new partition UUID's (by default for deploy)
-# 1: keep original partition UUID's (by default for restore)
+# Empty: generate new partition UUID's (default for deployment)
+# 1: keep original partition UUID's (default for restore)
 # it can be changed anyway
 keep_uuids=
 
@@ -119,7 +124,7 @@ efi_distributor=
 # has no rpm executable and valid RPM database
 have_rpmdb=
 
-# Empty: TBH device not required (by default)
+# Empty: TBH device is not required (by default)
 # 1: TBH device is recommended, warning if not found
 # 2: TBH device is required, fatal message if not found
 check_tbh=
@@ -133,13 +138,12 @@ old_ext4_boot=
 grub_install_opts=
 
 # Users list to remove with the /home directory contents,
-# it used only in deploy and full-restore modes, used only
-# in deploy and full-restore modes
+# it used only in deployment and full-restore modes
 remove_users_list=
 
 # Users list to re-create /home directory contents, existing
 # home archive will be ignored with this option, used only
-# in deploy and full-restore modes
+# in deployment and full-restore modes
 create_users_list=
 
 # Pattern to remove old Linux kernel in the chroot,
@@ -156,21 +160,21 @@ chroot_PATH="/sbin:/usr/sbin:/usr/local/sbin:/bin:/usr/bin:/usr/local/bin"
 chroot_LC_ALL="C.utf8"
 chroot_TERM=linux
 
-############################
-### Restore only options ###
-############################
+#############################
+### Restore only settings ###
+#############################
 
 # 1: enable to expand last partition before formatting,
 # this option used only in the full-restore mode
 expand_last_part=
 
-# 1: make unique clone of the system and use deploy hooks
-# after restore partitions (always set to 1 in deploy mode)
+# 1: make unique clone of the system and use deployment hooks
+# after restore partitions (always set to 1 in deployment mode)
 unique_clone=
 
-###########################
-### Deploy only options ###
-###########################
+################################
+### Deployment only settings ###
+################################
 
 # 1: cleanup rootfs from the trash files after restore
 cleanup_after=
@@ -209,13 +213,20 @@ swapsize=AUTO
 rootsize=
 
 # Default GUID/GPT partition names
-prepname=PReP
-esp_name=ESP
-bbp_name=GRUB
-bootname=BOOT
-swapname=SWAP
-rootname=ROOT
-dataname=DATA
+prep_gpt_label=PReP
+esp__gpt_label=ESP
+bbp__gpt_label=GRUB
+boot_gpt_label=BOOT
+swap_gpt_label=SWAP
+root_gpt_label=ROOT
+data_gpt_label=DATA
+
+# Default filesystem volume labels
+esp__fs_label=ESP
+boot_fs_label=BOOT
+swap_fs_label=SWAP
+root_fs_label=ROOT
+data_fs_label=DATA
 
 # ESP (EFI System Partition) mount options
 esp_opts="umask=0,quiet,showexec,iocharset=utf8,codepage=866"

@@ -2,11 +2,11 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
-####################
-### Main program ###
-####################
+###################
+### Main script ###
+###################
 
 # Safety first
 set -o errexit
@@ -21,16 +21,16 @@ readonly progname="${0##*/}"
 readonly scriptname="$(realpath -- "$0")"
 
 # Supplemental sources
-readonly utility="${scriptname%/*}/libexec"
+readonly libdir="${scriptname%/*}/libexec"
 
 # Bootstrapping
-. "$utility"/defaults.sh
-[ ! -s "/etc/$progname"/restore.ini ] ||
-	. "/etc/$progname"/restore.ini
-. "$utility"/internal.sh
-. "$utility"/common.sh
-. "$utility"/parser.sh
-. "$utility"/config.sh
+. "$libdir"/defaults.sh
+[ ! -s "/etc/$progname"/restore.conf ] ||
+	. "/etc/$progname"/restore.conf
+. "$libdir"/internal.sh
+. "$libdir"/common.sh
+. "$libdir"/parser.sh
+. "$libdir"/config.sh
 
 # Catching all unexpected errors
 trap 'unexpected_error "$LINENO" "${BASH_SOURCE[0]}"' ERR
@@ -59,31 +59,31 @@ if [ -n "${use_backup-}" ]; then
 fi
 
 # Setting up logging and user interface
-. "$utility"/logger.sh
+. "$libdir"/logger.sh
 
 # Checking the target disk drive
 if [ -n "${use_target-}" ]; then
 	nls_config target
 
-	. "$utility"/trusted.sh
-	. "$utility"/target.sh
+	. "$libdir"/trusted.sh
+	. "$libdir"/target.sh
 
-	check_trusted_boot_hw
+	check_trusted_boothw
 	protect_boot_devices
 	search_target_device
 fi
 
 # Executing the primary action
 if [ "${action-}" = validate ]; then
-	. "$utility"/validate.sh
+	. "$libdir"/validate.sh
 else
 	nls_config restore
 
-	. "$utility"/recovery.sh
+	. "$libdir"/restore.sh
 fi
 
-# Finalizing recovery
+# Completing the restore
 [ -z "${finalact-}" ] ||
-	. "$utility"/finalize.sh
+	. "$libdir"/finalize.sh
 exit 0
 

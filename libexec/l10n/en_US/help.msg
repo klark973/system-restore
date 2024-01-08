@@ -51,7 +51,7 @@ Examples:
   the /dev/nvme0n1 device will be wiped, repartitioned, restored from the
   backup in "deployment mode", the unique host data will be reinitialized
   to personalize the installation, and after successful restoration, the
-  computer will be powered off.
+  computer will be turned off.
 
 User manual:
   https://www.altlinux.org/Rescue/Recovery (ru)

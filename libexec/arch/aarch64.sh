@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023 ALT Linux Team
+### Copyright (C) 2021-2024 ALT Linux Team
 
 # Called before including restore.ini files
 # supplied with the backup and/or profile,
@@ -38,7 +38,7 @@ platform_setup_internals()
 #
 setup_bootloaders_platform()
 {
-	local v f="BOOT/BOOTAA64.EFI"
+	local f="BOOT/BOOTAA64.EFI"
 
 	[ -n "$safe_uefi_boot" ] && [ -s "/boot/efi/EFI/$f" ] ||
 		f="$efi_distributor/bootaa64.efi"
@@ -49,14 +49,11 @@ setup_bootloaders_platform()
 		log "Bootloader %s for %s already installed" "grub-efi" "$platform"
 	else
 		log "Installing bootloader %s for %s..." "grub-efi" "$platform"
+		run grub-install \
+			--target=arm64-efi $grub_install_opts \
+			--efi-directory=/boot/efi --recheck \
+			--boot-directory=/boot -- "$target"
 		need_grub_update=1
-
-		for v in ${multi_targets:-$target}; do
-			run grub-install \
-				--target=arm64-efi $grub_install_opts \
-				--efi-directory=/boot/efi --recheck \
-				--boot-directory=/boot -- "$v"
-		done
 	fi
 }
 

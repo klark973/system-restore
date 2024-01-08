@@ -2,7 +2,7 @@
 ### This file is covered by the GNU General Public License
 ### version 3 or later.
 ###
-### Copyright (C) 2021-2023, ALT Linux Team
+### Copyright (C) 2021-2024, ALT Linux Team
 
 # Special hook for platform-specific function,
 # it can be overridden in arch/$platform.sh
@@ -43,9 +43,9 @@ check_prerequires()
 
 	# Including support for this platform
 	v="Platform '%s' is not supported yet!"
-	[ -s "$utility/arch/$platform.sh" ] ||
+	[ -s "$libdir/arch/$platform.sh" ] ||
 		fatal F000 "$v" "$platform"
-	. "$utility/arch/$platform.sh"
+	. "$libdir/arch/$platform.sh"
 	check_prereq_platform
 }
 
@@ -56,11 +56,16 @@ check_prerequires()
 #
 check_volume_layouts()
 {
-	local v cnt=0
+	local v llba=0 secsz=0 cnt=0
+
+	pt_scheme=
 
 	for v in $(cat TARGETS); do
 		[ -s "$v.sfdisk" ] ||
-			fatal F000 "%s.sfdisk required!" "$v"
+			fatal F000 "%s.sfdisk is required!" "$v"
+		llba="$(sed -n -E 's/^last\-lba: //p' "$v.sfdisk")"
+		secsz="$(sed -n -E 's/^sector\-size: //p' "$v.sfdisk")"
+
 		if grep -qsE '^label: gpt$' "$v.sfdisk"; then
 			pt_scheme=gpt
 		elif [ -z "$pt_scheme" ] &&
@@ -68,17 +73,29 @@ check_volume_layouts()
 		then
 			pt_scheme=dos
 		fi
+
 		cnt=$((1 + $cnt))
 	done
-	#
-	[ -n "$pt_scheme" ] ||
+
+	[ -n "$pt_scheme" ] &&
+	is_number "$llba" && is_number "$secsz" &&
+	[ "$llba" -gt 6 ] && [ "$secsz" -ge 512 ] ||
 		fatal F000 "Metadata for target device(s) not found!"
+
 	if [ "$cnt" != 1 ]; then
 		case "$action" in
 		fullrest|sysrest)
-			fatal F000 "Use deploy mode for restore from this backup!"
+			fatal F000 "Use deployment mode to restore from this backup!"
 			;;
 		esac
+	elif [ "$action" = fullrest ]; then
+		case "$secsz" in
+		512)	v="$(( (1 + $llba) / 2 ))";;
+		4096)	v="$(( (1 + $llba) * 4 ))";;
+		*)	fatal F000 "Unsupported sector size (%s) in metadata!" "$secsz";;
+		esac
+		target_max_capacity=
+		target_min_capacity="${v}K"
 	fi
 }
 
@@ -297,14 +314,23 @@ setup_profile()
 	fi
 }
 
+# An additional single-drive configuration checker,
+# it can be overridden in $libdir/part/$partitioner.sh
+# or $backup/$partitioner.sh
+#
+single_drive_config()
+{
+	: # Do nothing by default
+}
+
 # Default implementation of the additional multi-drives configuration
-# checker, it can be overridden in $utility/part/$partitioner.sh or
+# checker, it can be overridden in $libdir/part/$partitioner.sh or
 # $backup/$partitioner.sh
 #
 multi_drives_config()
 {
 	[ "$action" != fullrest ] && [ "$action" != sysrest ] ||
-		fatal F000 "Use deploy mode with the multi-drives configuration"
+		fatal F000 "Use deployment mode with the multi-drives configuration."
 }
 
 # Here is a place to safely setup user-defined hooks once
@@ -344,7 +370,7 @@ __check_config()
 	[ "$action" != validate ] ||
 		validate=1
 
-	# Tune some deploy settings
+	# Tune some deployment settings
 	if [ "$action" = deploy ]; then
 		if [ "$swapsize" = AUTO ]; then
 			swapsize="s/^MemTotal:\s+([0-9]*) .*$/\1/p"
@@ -373,6 +399,7 @@ __check_config()
 		target="$(readlink -fv -- "/dev/${target##/dev/}" 2>/dev/null ||:)"
 		[ "$num_targets" = 1 ] && [ -b "$target" ] && [ -z "$multi_targets" ] ||
 			fatal F000 "Invalid target drive configuration!"
+		single_drive_config
 	elif [ -n "$multi_targets" ]; then
 		num_targets=0
 		ppartsep=
@@ -413,7 +440,7 @@ __check_config()
 	[ -z "$use_logger" ] ||
 		required_tools="$required_tools logger"
 	[ -z "$use_dialog" ] ||
-		required_tools="$required_tools dialog"
+		required_tools="$required_tools dialog tmux"
 	i="$(get_proto_requires)"
 	[ -z "$i" ] ||
 		required_tools="$required_tools $i"
@@ -432,8 +459,8 @@ __check_config()
 			: Do nothing by default
 		}"
 
-		if [ -s "$utility/part/$partitioner.sh" ]; then
-			. "$utility/part/$partitioner.sh"
+		if [ -s "$libdir/part/$partitioner.sh" ]; then
+			. "$libdir/part/$partitioner.sh"
 		elif [ "$partitioner" != none ]; then
 			i="The partitioner '%s' not found!"
 			is_file_exist "$partitioner.sh" ||
